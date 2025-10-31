@@ -1,0 +1,110 @@
+/* assets/css/pages/DashboardPage.css */
+
+.dashboard-page {
+  padding: 24px;
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
+
+/* Statistics Cards */
+.dashboard-page .stat-card {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  border-top: 3px solid transparent;
+}
+
+.dashboard-page .stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.dashboard-page .stat-card .ant-statistic-title {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 8px;
+}
+
+.dashboard-page .stat-card .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Chart Cards */
+.dashboard-page .chart-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-page .chart-card .ant-card-head {
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.dashboard-page .chart-card .ant-card-head-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Category Details */
+.dashboard-page .category-details-card .ant-card-small .ant-card-body {
+  padding: 16px;
+}
+
+.dashboard-page .category-details-card .ant-card-small:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 16px;
+  }
+
+  .dashboard-page .stat-card .ant-statistic-content {
+    font-size: 20px;
+  }
+}
+
+/* Loading Spinner */
+.dashboard-page .ant-spin-nested-loading {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Empty State */
+.dashboard-page .ant-empty {
+  padding: 40px 0;
+}
+
+.dashboard-page .ant-empty-description {
+  color: #8c8c8c;
+}
+
+/* Alert */
+.dashboard-page .ant-alert {
+  border-radius: 8px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tags */
+.dashboard-page .ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* Tooltips */
+.dashboard-page .ant-tooltip {
+  max-width: 300px;
+}

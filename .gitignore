@@ -1,0 +1,70 @@
+# ----------------------------------------
+# 1. Firebase Service Account (Tuyệt đối không push)
+# ----------------------------------------
+# File quanlygoiychitieu-firebase-adminsdk-fbsvc-*.json chứa khóa bí mật
+# Thay thế tên file cụ thể nếu cần, hoặc dùng wildcard *
+api-server/*.json 
+!api-server/package.json # Đảm bảo file package.json vẫn được push
+
+# ----------------------------------------
+# 2. File biến môi trường (Tuyệt đối không push giá trị bí mật)
+# ----------------------------------------
+# File .env thường chứa các biến bí mật (API keys, DB connection strings, etc.)
+# Có thể giữ lại file .env.example để dev khác biết cần những biến nào
+**/.env
+
+# ----------------------------------------
+# 3. Thư mục và file sinh ra tự động
+# ----------------------------------------
+
+# Node.js
+**/node_modules
+**/dist
+**/build
+**/tmp
+
+# Docker
+# Thư mục chứa build context và volume nếu có
+*.log
+*.pid
+.DS_Store # MacOS
+npm-debug.log*
+yarn-error.log
+
+# React Native/Expo
+# Thư mục và file tạm của mobile-app
+mobile-app/.expo/
+mobile-app/web-build/
+mobile-app/android/
+mobile-app/ios/
+
+# Web Admin (React/Vite)
+web-admin/dist/
+web-admin/quanlygoiychitieu-firebase-adminsdk-fbsvc-*.json
+web-admin/env/*
+
+# Family Expo (React Native/Expo)
+FamilyBudgetExpo/.expo/
+FamilyBudgetExpo/web-build/
+FamilyBudgetExpo/android/
+FamilyBudgetExpo/ios/
+FamilyBudgetExpo/firebaseConfig.js
+FamilyBudgetExpo/firebaseConfig.ts
+FamilyBudgetExpo/app-example
+FamilyBudgetExpo/.env*.local
+FamilyBudgetExpo/*.pem
+FamilyBudgetExpo/.kotlin/
+FamilyBudgetExpo/*.orig.*
+FamilyBudgetExpo/*.jks
+FamilyBudgetExpo/*.p8
+FamilyBudgetExpo/*.p12
+FamilyBudgetExpo/*.key
+FamilyBudgetExpo/*.mobileprovision
+FamilyBudgetExpo/.metro-health-check*
+FamilyBudgetExpo/*.tsbuildinfo
+FamilyBudgetExpo/npm-debug.*
+FamilyBudgetExpo/yarn-debug.*
+FamilyBudgetExpo/yarn-error.*
+FamilyBudgetExpo/.DS_Store
+Firebase/quanlygoiychitieu-firebase-adminsdk-fbsvc-*.json
+env/quanlygoiychitieu-firebase-adminsdk-fbsvc-*.json    

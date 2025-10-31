@@ -1,0 +1,112 @@
+.users-page {
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+/* Stat Cards */
+.stat-card {
+  border-radius: 12px;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.stat-total {
+  border-left: 4px solid #1890ff;
+}
+
+.stat-active {
+  border-left: 4px solid #52c41a;
+}
+
+.stat-locked {
+  border-left: 4px solid #ff4d4f;
+}
+
+.stat-admin {
+  border-left: 4px solid #f50;
+}
+
+/* Table Card */
+.users-table-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.users-table-card .ant-card-head {
+  background: linear-gradient(90deg, #06b6d4, #3b82f6);
+  color: #fff;
+  border-radius: 16px 16px 0 0;
+}
+
+.users-table-card .ant-card-head-title {
+  color: #fff;
+}
+
+.users-table-card .ant-card-extra button {
+  color: #fff;
+  border-color: #fff;
+}
+
+.users-table-card .ant-card-extra button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Table */
+.users-table .ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.users-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  color: #333;
+}
+
+.users-table .locked-row {
+  background: #fff1f0;
+}
+
+.users-table .locked-row:hover > td {
+  background: #ffe7e6 !important;
+}
+
+/* Buttons */
+.btn-lock {
+  border-color: #ff4d4f;
+  color: #ff4d4f;
+}
+
+.btn-lock:hover {
+  background: #ff4d4f;
+  color: #fff;
+  border-color: #ff4d4f;
+}
+
+.btn-unlock {
+  border-color: #52c41a;
+  color: #52c41a;
+}
+
+.btn-unlock:hover {
+  background: #52c41a;
+  color: #fff;
+  border-color: #52c41a;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .users-page {
+    padding: 16px;
+  }
+
+  .users-table {
+    font-size: 12px;
+  }
+}

@@ -1,0 +1,11 @@
+notificationID,userID,type,title,message,isRead,priority,relatedEntityType,relatedEntityID,actionURL,createdAt,readAt,expiresAt
+notif001,u002,BUDGET_ALERT,Cảnh báo vượt ngân sách,Bạn đã chi 85% ngân sách Ăn uống tháng này,FALSE,HIGH,BUDGET,bud001,/budgets/bud001,2025-01-10T08:31:00Z,,2025-02-10T08:31:00Z
+notif002,u003,GOAL_REMINDER,Nhắc nhở mục tiêu,Đã đến lúc đóng góp 4500000 VND cho mục tiêu Du lịch Nhật Bản,TRUE,NORMAL,GOAL,goal002,/goals/goal002,2025-01-05T20:00:00Z,2025-01-06T08:00:00Z,2025-02-05T20:00:00Z
+notif003,u005,BUDGET_ALERT,Vượt ngân sách Giáo dục,Bạn đã vượt ngân sách Giáo dục 83%,FALSE,URGENT,BUDGET,bud005,/budgets/bud005,2025-01-06T10:31:00Z,,2025-02-06T10:31:00Z
+notif004,u007,SYSTEM,Chào mừng bạn,Chào mừng bạn đến với Family Budget!,TRUE,LOW,,,/welcome,2025-01-04T00:00:00Z,2025-01-04T08:00:00Z,
+notif005,u008,RECURRING_DUE,Giao dịch định kỳ sắp đến,Giao dịch "Giải trí cuối tuần" sẽ được tạo vào 2025-01-14,FALSE,NORMAL,RECURRING_TXN,rec008,/recurring/rec008,2025-01-12T20:00:00Z,,2025-01-14T23:59:59Z
+notif006,u002,GOAL_REMINDER,Hoàn thành mục tiêu,Chúc mừng! Bạn đã hoàn thành mục tiêu Đi Đà Lạt,TRUE,HIGH,GOAL,goal008,/goals/goal008,2025-01-10T12:00:00Z,2025-01-10T12:05:00Z,
+notif007,u009,BUDGET_ALERT,Cảnh báo chi tiêu Y tế,Bạn đã chi 53% ngân sách Y tế,FALSE,NORMAL,BUDGET,bud008,/budgets/bud008,2025-01-08T16:31:00Z,,2025-02-08T16:31:00Z
+notif008,u004,SYSTEM,Cập nhật mới,Phiên bản mới đã có: v1.2.0,FALSE,LOW,,,/updates,2025-01-07T00:00:00Z,,2025-01-21T00:00:00Z
+notif009,u003,RECURRING_DUE,Nhắc nhở thanh toán,Đến hạn thanh toán tiền nước hàng tháng,TRUE,NORMAL,RECURRING_TXN,rec002,/recurring/rec002,2025-01-31T20:00:00Z,2025-02-01T08:00:00Z,2025-02-01T23:59:59Z
+notif010,u005,GOAL_REMINDER,Tiến độ mục tiêu,Bạn đã đạt 25% mục tiêu Mua xe máy,TRUE,NORMAL,GOAL,goal004,/goals/goal004,2025-01-10T20:00:00Z,2025-01-11T08:00:00Z,2025-02-10T20:00:00Z

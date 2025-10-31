@@ -1,0 +1,286 @@
+/* assets/css/pages/CategoriesPage.css */
+
+.categories-page {
+  padding: 24px;
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
+
+/* Category Card */
+.category-card {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.category-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.category-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.category-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.category-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+}
+
+.category-color-bar {
+  height: 4px;
+  border-radius: 2px;
+  margin-top: 16px;
+}
+
+/* Icon Selector */
+.icon-selector {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 8px;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.icon-option {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  background-color: white;
+}
+
+.icon-option:hover {
+  background-color: #e6f7ff;
+  border-color: #1890ff;
+  transform: scale(1.1);
+}
+
+.icon-option.selected {
+  background-color: #1890ff;
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+/* Color Selector */
+.color-selector {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.color-option {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+  border: 3px solid transparent;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.color-option.selected {
+  border-color: #262626;
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Tabs */
+.categories-page .ant-tabs-tab {
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.categories-page .ant-tabs-tab-active {
+  font-weight: 600;
+}
+
+/* Modal */
+.categories-page .ant-modal-header {
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.categories-page .ant-modal-footer {
+  border-top: 2px solid #f0f0f0;
+  padding: 16px 24px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .categories-page {
+    padding: 16px;
+  }
+
+  .icon-selector {
+    grid-template-columns: repeat(8, 1fr);
+  }
+
+  .color-selector {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .category-icon {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+@media (max-width: 576px) {
+  .icon-selector {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .color-selector {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .icon-option {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+
+  .color-option {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Empty State */
+.categories-page .ant-empty {
+  padding: 60px 0;
+}
+
+.categories-page .ant-empty-description {
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+/* Alert */
+.categories-page .ant-alert {
+  border-radius: 8px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading */
+.categories-page .ant-spin-container {
+  min-height: 400px;
+}
+
+/* Table View */
+.categories-page .ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.categories-page .ant-table-thead > tr > th {
+  background-color: #fafafa;
+  font-weight: 600;
+}
+
+/* Search Input */
+.categories-page .ant-input-search {
+  border-radius: 8px;
+}
+
+/* View Mode Toggle */
+.categories-page .ant-card-extra {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Category Card Actions */
+.categories-page .ant-card-actions {
+  border-top: 1px solid #f0f0f0;
+  background-color: #fafafa;
+}
+
+.categories-page .ant-card-actions > li {
+  margin: 8px 0;
+}
+
+.categories-page .ant-card-actions > li > span {
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.categories-page .ant-card-actions > li > span:hover {
+  color: #1890ff;
+}
+
+/* Modal Improvements */
+.categories-page .ant-modal-body {
+  padding: 24px;
+}
+
+.categories-page .ant-modal-body > div {
+  margin-bottom: 20px;
+}
+
+/* Input Number */
+.categories-page .ant-input-number {
+  width: 100%;
+}
+
+/* Switch */
+.categories-page .ant-switch {
+  margin-right: 8px;
+}

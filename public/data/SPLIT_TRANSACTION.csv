@@ -1,0 +1,11 @@
+splitID,parentTransactionID,childTransactionID,splitAmount,splitPercentage,participantName,notes,createdAt
+split001,txn003,txn003_1,75000,50.00,Tôi,Chia đôi với bạn,2025-01-10T12:15:00Z
+split002,txn003,txn003_2,75000,50.00,Bạn A,Phần của bạn A,2025-01-10T12:15:00Z
+split003,txn008,txn008_1,150000,50.00,Tôi,Vé xem phim 2 người,2025-01-09T18:20:00Z
+split004,txn008,txn008_2,150000,50.00,Bạn gái,Phần của bạn gái,2025-01-09T18:20:00Z
+split005,txn006,txn006_1,2500000,50.00,Tôi,Học phí chia 2 kỳ,2025-01-06T10:30:00Z
+split006,txn006,txn006_2,2500000,50.00,Kỳ 2,Đợt 2 trả sau,2025-01-06T10:30:00Z
+split007,txn009,txn009_1,500000,33.33,Quần áo,Chi tiết mua sắm,2025-01-07T15:00:00Z
+split008,txn009,txn009_2,500000,33.33,Giày dép,Chi tiết mua sắm,2025-01-07T15:00:00Z
+split009,txn009,txn009_3,500000,33.33,Phụ kiện,Chi tiết mua sắm,2025-01-07T15:00:00Z
+split010,txn010,txn010_1,400000,50.00,Khám bệnh,Phí khám,2025-01-08T16:30:00Z

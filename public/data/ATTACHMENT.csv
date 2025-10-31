@@ -1,0 +1,11 @@
+attachmentID,transactionID,fileURL,fileName,fileType,fileSize,mimeType,thumbnailURL,ocrRawText,ocrConfidence,wasEdited,uploadedAt,uploadedBy
+att001,txn003,https://storage.googleapis.com/receipts/001.jpg,receipt_001.jpg,IMAGE,245680,image/jpeg,https://storage.googleapis.com/thumbs/001_thumb.jpg,THE PIZZA COMPANY\nTotal: 150000 VND\nDate: 10/01/2025,0.89,FALSE,2025-01-10T12:15:00Z,USER
+att002,txn010,https://storage.googleapis.com/receipts/002.jpg,receipt_002.jpg,IMAGE,312450,image/jpeg,https://storage.googleapis.com/thumbs/002_thumb.jpg,NHA KHOA KIM\nAmount: 800000\n08/01/2025,0.75,TRUE,2025-01-08T16:30:00Z,USER
+att003,txn001,https://storage.googleapis.com/receipts/003.jpg,receipt_003.jpg,IMAGE,198320,image/jpeg,https://storage.googleapis.com/thumbs/003_thumb.jpg,STARBUCKS\n50000 VND\n10/01/2025,0.92,FALSE,2025-01-10T08:30:00Z,USER
+att004,txn005,https://storage.googleapis.com/receipts/004.jpg,receipt_004.jpg,IMAGE,276540,image/jpeg,https://storage.googleapis.com/thumbs/004_thumb.jpg,PETROLIMEX\n200000\n08/01/2025,0.88,FALSE,2025-01-08T07:45:00Z,USER
+att005,txn008,https://storage.googleapis.com/receipts/005.jpg,receipt_005.jpg,IMAGE,332100,image/jpeg,https://storage.googleapis.com/thumbs/005_thumb.jpg,CGV CINEMA\n300000 VND,0.85,FALSE,2025-01-09T18:20:00Z,USER
+att006,txn009,https://storage.googleapis.com/receipts/006.jpg,receipt_006.jpg,IMAGE,412890,image/jpeg,https://storage.googleapis.com/thumbs/006_thumb.jpg,H&M\n1500000,0.81,TRUE,2025-01-07T15:00:00Z,USER
+att007,txn003,https://storage.googleapis.com/receipts/007.pdf,menu_007.pdf,PDF,89670,application/pdf,,Pizza Menu,0.78,FALSE,2025-01-10T12:16:00Z,USER
+att008,txn010,https://storage.googleapis.com/receipts/008.jpg,xray_008.jpg,IMAGE,564230,image/jpeg,https://storage.googleapis.com/thumbs/008_thumb.jpg,X-RAY RESULT,0.65,FALSE,2025-01-08T16:32:00Z,USER
+att009,txn001,https://storage.googleapis.com/receipts/009.jpg,receipt_009.jpg,IMAGE,223450,image/jpeg,https://storage.googleapis.com/thumbs/009_thumb.jpg,STARBUCKS RESERVE,0.90,FALSE,2025-01-10T08:31:00Z,USER
+att010,txn006,https://storage.googleapis.com/receipts/010.pdf,tuition_010.pdf,PDF,156780,application/pdf,,TUITION FEE RECEIPT,0.95,FALSE,2025-01-06T10:30:00Z,USER

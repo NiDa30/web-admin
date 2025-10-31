@@ -1,0 +1,11 @@
+merchantID,name,category,defaultCategoryID,logo,address,latitude,longitude,phone,website,keywords,usageCount,isVerified,createdAt
+mer001,Starbucks,Coffee Shop,cat001,https://logo.clearbit.com/starbucks.com,Quận 1 TPHCM,10.7769,106.7009,19001832,https://starbucks.vn,"[""coffee"",""cafe"",""starbucks""]",5,TRUE,2025-01-01T00:00:00Z
+mer002,The Pizza Company,Restaurant,cat001,https://logo.clearbit.com/1112.vn,Quận 3 TPHCM,10.7860,106.6867,19001080,https://1112.vn,"[""pizza"",""restaurant""]",3,TRUE,2025-01-01T00:00:00Z
+mer003,EVN HCMC,Utility Provider,cat002,https://logo.clearbit.com/evnhcmc.vn,TPHCM,,,19001006,https://evnhcmc.vn,"[""electricity"",""power"",""utility""]",8,TRUE,2025-01-01T00:00:00Z
+mer004,Petrolimex,Gas Station,cat007,https://logo.clearbit.com/petrolimex.com.vn,Quận 10 TPHCM,10.7722,106.6681,18009099,https://petrolimex.com.vn,"[""fuel"",""gas"",""petrol""]",12,TRUE,2025-01-01T00:00:00Z
+mer005,CGV Cinemas,Entertainment,cat005,https://logo.clearbit.com/cgv.vn,Quận 1 TPHCM,10.7795,106.6999,19002224,https://cgv.vn,"[""cinema"",""movie"",""entertainment""]",7,TRUE,2025-01-01T00:00:00Z
+mer006,H&M,Fashion Retail,cat006,https://logo.clearbit.com/hm.com,Quận 1 TPHCM,10.7730,106.6989,+842835209096,https://www2.hm.com/vi_vn,"[""fashion"",""clothes"",""shopping""]",4,TRUE,2025-01-01T00:00:00Z
+mer007,Circle K,Convenience Store,cat001,https://logo.clearbit.com/circlek.com.vn,Quận 3 TPHCM,10.7850,106.6900,19006706,https://circlek.com.vn,"[""convenience"",""store"",""food""]",15,TRUE,2025-01-01T00:00:00Z
+mer008,Vinmart,Supermarket,cat006,https://logo.clearbit.com/vinmart.com,Quận 5 TPHCM,10.7550,106.6650,19006789,https://vinmart.com,"[""supermarket"",""grocery"",""shopping""]",9,TRUE,2025-01-01T00:00:00Z
+mer009,Grab,Transportation,cat007,https://logo.clearbit.com/grab.com,TPHCM,,,19001234,https://grab.com,"[""taxi"",""transport"",""ride""]",20,TRUE,2025-01-01T00:00:00Z
+mer010,Tiki,E-commerce,cat006,https://logo.clearbit.com/tiki.vn,Online,,,19006035,https://tiki.vn,"[""online"",""shopping"",""ecommerce""]",6,TRUE,2025-01-01T00:00:00Z

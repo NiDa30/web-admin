@@ -1,0 +1,11 @@
+categoryID,name,type,isSystemDefault,keywords,icon,color,parentCategoryID,displayOrder,isHidden,createdAt
+cat001,Ăn uống,EXPENSE,TRUE,"[""food"",""restaurant"",""cafe"",""lunch"",""dinner""]",restaurant,#FF6B6B,,0,FALSE,2025-01-01T00:00:00Z
+cat002,Sinh hoạt,EXPENSE,TRUE,"[""utility"",""electricity"",""water"",""internet"",""phone""]",home,#4ECDC4,,1,FALSE,2025-01-01T00:00:00Z
+cat003,Giáo dục,EXPENSE,TRUE,"[""school"",""course"",""book"",""tuition""]",school,#45B7D1,,2,FALSE,2025-01-01T00:00:00Z
+cat004,Y tế,EXPENSE,TRUE,"[""hospital"",""medicine"",""clinic"",""doctor"",""pharmacy""]",local-hospital,#96CEB4,,3,FALSE,2025-01-01T00:00:00Z
+cat005,Giải trí,EXPENSE,TRUE,"[""movie"",""game"",""travel"",""entertainment""]",movie,#FFEAA7,,4,FALSE,2025-01-01T00:00:00Z
+cat006,Mua sắm,EXPENSE,TRUE,"[""shopping"",""clothes"",""electronics""]",shopping-cart,#DFE6E9,,5,FALSE,2025-01-01T00:00:00Z
+cat007,Giao thông,EXPENSE,TRUE,"[""fuel"",""taxi"",""bus"",""parking"",""grab""]",directions-car,#74B9FF,,6,FALSE,2025-01-01T00:00:00Z
+cat008,Lương,INCOME,TRUE,"[""salary"",""wage"",""income""]",attach-money,#00B894,,0,FALSE,2025-01-01T00:00:00Z
+cat009,Thưởng,INCOME,TRUE,"[""bonus"",""reward""]",card-giftcard,#FDCB6E,,1,FALSE,2025-01-01T00:00:00Z
+cat010,Phụ thu,INCOME,TRUE,"[""allowance"",""extra""]",payment,#A29BFE,,2,FALSE,2025-01-01T00:00:00Z

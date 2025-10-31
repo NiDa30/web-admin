@@ -1,0 +1,11 @@
+tagID,userID,name,color,icon,description,usageCount,createdAt
+tag001,u002,Công việc,#2196F3,work,Chi phí liên quan công việc,5,2025-01-02T00:00:00Z
+tag002,u002,Gia đình,#E91E63,family,Chi tiêu cho gia đình,8,2025-01-02T00:00:00Z
+tag003,u003,Giải trí,#FF9800,movie,Hoạt động giải trí,12,2025-01-02T00:00:00Z
+tag004,u003,Khẩn cấp,#F44336,priority-high,Chi phí khẩn cấp không thể trì hoãn,3,2025-01-02T00:00:00Z
+tag005,u004,Xe cộ,#9C27B0,directions-car,Chi phí liên quan xe máy,7,2025-01-03T00:00:00Z
+tag006,u005,Học tập,#4CAF50,school,Chi phí học tập,6,2025-01-03T00:00:00Z
+tag007,u007,Du lịch,#00BCD4,flight,Chi phí du lịch,4,2025-01-04T00:00:00Z
+tag008,u008,Mua sắm,#FFC107,shopping-bag,Mua sắm cá nhân,10,2025-01-05T00:00:00Z
+tag009,u009,Sức khỏe,#8BC34A,local-hospital,Chi phí y tế và sức khỏe,5,2025-01-05T00:00:00Z
+tag010,u002,Tiết kiệm,#607D8B,savings,Các khoản tiết kiệm,3,2025-01-02T00:00:00Z
