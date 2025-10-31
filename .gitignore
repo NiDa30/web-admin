@@ -67,4 +67,5 @@ FamilyBudgetExpo/yarn-debug.*
 FamilyBudgetExpo/yarn-error.*
 FamilyBudgetExpo/.DS_Store
 Firebase/quanlygoiychitieu-firebase-adminsdk-fbsvc-*.json
-env/quanlygoiychitieu-firebase-adminsdk-fbsvc-*.json    
+env/quanlygoiychitieu-firebase-adminsdk-fbsvc-*.json 
+quanlygoiychitieu-firebase-adminsdk-fbsvc-86a2a7662d.json   
