@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  Database,
 } from "lucide-react";
 
 function AdminLayout({ adminName, loginEmail, onLogout }) {
@@ -50,6 +51,12 @@ function AdminLayout({ adminName, loginEmail, onLogout }) {
       label: "Cấu hình",
       icon: <Settings size={20} />,
       path: "/admin/config",
+    },
+    {
+      key: "database",
+      label: "Quản lý Database",
+      icon: <Database size={20} />,
+      path: "/admin/database",
     },
   ];
 

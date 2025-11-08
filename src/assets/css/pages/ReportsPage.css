@@ -1,0 +1,120 @@
+.reports-page {
+  padding: 0;
+}
+
+.reports-page .stat-card {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.reports-page .stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.reports-page .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.reports-page .ant-tabs-tab {
+  font-weight: 500;
+}
+
+.reports-page .ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.reports-page .ant-statistic-title {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.reports-page .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.reports-page .ant-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reports-page .ant-radio-button-wrapper {
+  border-radius: 4px;
+  margin: 0;
+}
+
+.reports-page .chart-container {
+  padding: 16px;
+}
+
+.reports-page .category-progress-bar {
+  height: 8px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.reports-page .category-progress-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.reports-page .top-transaction-item {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.3s ease;
+}
+
+.reports-page .top-transaction-item:hover {
+  background-color: #fafafa;
+}
+
+.reports-page .top-transaction-item:last-child {
+  border-bottom: none;
+}
+
+.reports-page .filter-section {
+  background: #fafafa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.reports-page .comparison-card {
+  text-align: center;
+  padding: 16px;
+}
+
+.reports-page .growth-indicator {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.reports-page .growth-indicator.positive {
+  color: #52c41a;
+}
+
+.reports-page .growth-indicator.negative {
+  color: #ff4d4f;
+}
+
+.reports-page .category-icon {
+  font-size: 24px;
+  margin-right: 8px;
+}
+
+.reports-page .category-card {
+  margin-bottom: 12px;
+  border-left: 4px solid;
+}
+
+.reports-page .category-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+

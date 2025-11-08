@@ -7,9 +7,10 @@ import {
   getCountFromServer,
   Timestamp,
   onSnapshot,
+  orderBy,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { COLLECTIONS } from "../constants/collections";
+import { COLLECTIONS, getAllCollections } from "../constants/collections";
 
 /**
  * Dashboard Service - Kết nối Firebase
@@ -299,6 +300,9 @@ export const getDashboardData = async () => {
       lockedAccounts,
       monthlyTrends,
       categoryStats,
+      collectionStats,
+      syncLogStats,
+      systemStatus,
     ] = await Promise.all([
       getTotalUsers(),
       getNewUsersThisMonth(),
@@ -307,6 +311,9 @@ export const getDashboardData = async () => {
       getLockedAccounts(),
       getMonthlyTrends(),
       getCategoryStats(),
+      getAllCollectionStats(),
+      getSyncLogStats(),
+      getSystemStatus(),
     ]);
 
     const previousMonthUsers =
@@ -347,6 +354,9 @@ export const getDashboardData = async () => {
         monthlyTrends,
         categoryStats,
       },
+      collections: collectionStats,
+      sync: syncLogStats,
+      system: systemStatus,
     };
 
     console.log("Dashboard data loaded successfully:", dashboardData);
@@ -400,4 +410,186 @@ export const calculateGrowth = (current, previous) => {
   if (previous === 0) return "0%";
   const growth = Math.round(((current - previous) / previous) * 100);
   return `${growth > 0 ? "↑" : "↓"} ${Math.abs(growth)}%`;
+};
+
+// COLLECTION STATISTICS
+
+/**
+ * Get document count for all collections
+ */
+export const getAllCollectionStats = async () => {
+  try {
+    const collections = getAllCollections();
+    const stats = {};
+
+    await Promise.all(
+      collections.map(async (collectionName) => {
+        try {
+          const colRef = collection(db, collectionName);
+          const snapshot = await getCountFromServer(colRef);
+          stats[collectionName] = snapshot.data().count;
+        } catch (error) {
+          console.error(`Error getting count for ${collectionName}:`, error);
+          stats[collectionName] = 0;
+        }
+      })
+    );
+
+    return stats;
+  } catch (error) {
+    console.error("Error getting collection stats:", error);
+    return {};
+  }
+};
+
+/**
+ * Get sync log statistics
+ */
+export const getSyncLogStats = async () => {
+  try {
+    const syncLogsRef = collection(db, COLLECTIONS.SYNC_LOGS);
+    const snapshot = await getDocs(syncLogsRef);
+
+    let totalSyncs = 0;
+    let successSyncs = 0;
+    let failedSyncs = 0;
+    let conflictSyncs = 0;
+    let lastSyncTime = null;
+
+    const syncTimes = [];
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      totalSyncs++;
+
+      if (data.status === "SUCCESS") {
+        successSyncs++;
+      } else if (data.status === "FAILED") {
+        failedSyncs++;
+      } else if (data.status === "CONFLICT") {
+        conflictSyncs++;
+      }
+
+      if (data.syncTime) {
+        let syncTime;
+        if (data.syncTime.toDate) {
+          syncTime = data.syncTime.toDate();
+        } else if (data.syncTime instanceof Timestamp) {
+          syncTime = data.syncTime.toDate();
+        } else if (typeof data.syncTime === "string") {
+          syncTime = new Date(data.syncTime);
+        } else {
+          syncTime = new Date(data.syncTime);
+        }
+        if (syncTime && !isNaN(syncTime.getTime())) {
+          syncTimes.push(syncTime);
+        }
+      }
+    });
+
+    if (syncTimes.length > 0) {
+      syncTimes.sort((a, b) => b - a);
+      lastSyncTime = syncTimes[0];
+    }
+
+    return {
+      total: totalSyncs,
+      success: successSyncs,
+      failed: failedSyncs,
+      conflicts: conflictSyncs,
+      lastSyncTime,
+      successRate:
+        totalSyncs > 0
+          ? Math.round((successSyncs / totalSyncs) * 100)
+          : 0,
+    };
+  } catch (error) {
+    console.error("Error getting sync log stats:", error);
+    return {
+      total: 0,
+      success: 0,
+      failed: 0,
+      conflicts: 0,
+      lastSyncTime: null,
+      successRate: 0,
+    };
+  }
+};
+
+/**
+ * Get recent sync logs
+ */
+export const getRecentSyncLogs = async (limit = 10) => {
+  try {
+    const syncLogsRef = collection(db, COLLECTIONS.SYNC_LOGS);
+    const q = query(
+      syncLogsRef,
+      orderBy("syncTime", "desc")
+    );
+
+    const snapshot = await getDocs(q);
+    const logs = [];
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      logs.push({
+        id: doc.id,
+        ...data,
+        syncTime: data.syncTime?.toDate
+          ? data.syncTime.toDate()
+          : new Date(data.syncTime),
+      });
+
+      if (logs.length >= limit) {
+        return;
+      }
+    });
+
+    return logs.slice(0, limit);
+  } catch (error) {
+    console.error("Error getting recent sync logs:", error);
+    return [];
+  }
+};
+
+/**
+ * Get system status
+ */
+export const getSystemStatus = async () => {
+  try {
+    const status = {
+      firebaseConnected: true,
+      collectionsAccessible: true,
+      lastChecked: new Date(),
+      errors: [],
+    };
+
+    // Test Firebase connection by checking a collection
+    try {
+      const testRef = collection(db, COLLECTIONS.USERS);
+      await getCountFromServer(testRef);
+    } catch (error) {
+      status.firebaseConnected = false;
+      status.collectionsAccessible = false;
+      status.errors.push({
+        type: "FIREBASE_CONNECTION",
+        message: error.message,
+      });
+    }
+
+    return status;
+  } catch (error) {
+    console.error("Error getting system status:", error);
+    return {
+      firebaseConnected: false,
+      collectionsAccessible: false,
+      lastChecked: new Date(),
+      errors: [
+        {
+          type: "SYSTEM_ERROR",
+          message: error.message,
+        },
+      ],
+    };
+  }
 };

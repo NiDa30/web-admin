@@ -38,24 +38,37 @@ import {
 } from "@ant-design/icons";
 import { isFirebaseReady } from "../firebase";
 import {
-  getAllCategories,
   getCategoriesByType,
   addCategory,
   updateCategory,
   deleteCategory,
   getCategoryById,
+  getDefaultCategoriesByType,
+  uploadDefaultCategories,
+  updateDefaultCategory,
+  deleteDefaultCategory,
+  getDefaultCategoryById,
 } from "../services/categoryService";
+import {
+  DEFAULT_EXPENSE_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
+  ALL_DEFAULT_CATEGORIES,
+} from "../constants/defaultCategories";
 import "../assets/css/pages/CategoriesPage.css";
 
 const CategoriesPage = () => {
   // State management
   const [expenseCategories, setExpenseCategories] = useState([]);
   const [incomeCategories, setIncomeCategories] = useState([]);
+  const [defaultExpenseCategories, setDefaultExpenseCategories] = useState([]);
+  const [defaultIncomeCategories, setDefaultIncomeCategories] = useState([]);
   const [activeTab, setActiveTab] = useState("EXPENSE");
+  const [categoryView, setCategoryView] = useState("all"); // 'all', 'default', 'user'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [isEditingDefault, setIsEditingDefault] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'table'
 
@@ -188,15 +201,32 @@ const CategoriesPage = () => {
         throw new Error("Firebase chưa sẵn sàng");
       }
 
-      // Get all categories (for admin, we want to see all system categories)
-      // Pass null userId to get all system categories
-      const [expense, income] = await Promise.all([
+      // Load default categories (CATEGORIES_DEFAULT)
+      const [defaultExpense, defaultIncome] = await Promise.all([
+        getDefaultCategoriesByType("EXPENSE"),
+        getDefaultCategoriesByType("INCOME"),
+      ]);
+      setDefaultExpenseCategories(defaultExpense);
+      setDefaultIncomeCategories(defaultIncome);
+
+      // Load user categories (CATEGORIES)
+      const [userExpense, userIncome] = await Promise.all([
         getCategoriesByType(null, "EXPENSE"),
         getCategoriesByType(null, "INCOME"),
       ]);
 
-      setExpenseCategories(expense);
-      setIncomeCategories(income);
+      // Filter out default categories from user categories
+      const filteredUserExpense = userExpense.filter(
+        (cat) =>
+          !cat.isSystemDefault && !defaultExpense.some((dc) => dc.id === cat.id)
+      );
+      const filteredUserIncome = userIncome.filter(
+        (cat) =>
+          !cat.isSystemDefault && !defaultIncome.some((dc) => dc.id === cat.id)
+      );
+
+      setExpenseCategories(filteredUserExpense);
+      setIncomeCategories(filteredUserIncome);
     } catch (err) {
       console.error("Error loading categories:", err);
       setError(`Không thể tải danh mục: ${err.message}`);
@@ -210,10 +240,32 @@ const CategoriesPage = () => {
     loadCategories();
   }, []);
 
+  // Get categories based on view mode
+  const getCategoriesToDisplay = () => {
+    const isExpense = activeTab === "EXPENSE";
+    let categories = [];
+
+    if (categoryView === "default") {
+      categories = isExpense
+        ? defaultExpenseCategories
+        : defaultIncomeCategories;
+    } else if (categoryView === "user") {
+      categories = isExpense ? expenseCategories : incomeCategories;
+    } else {
+      // Show all: combine default and user categories
+      const defaults = isExpense
+        ? defaultExpenseCategories
+        : defaultIncomeCategories;
+      const users = isExpense ? expenseCategories : incomeCategories;
+      categories = [...defaults, ...users];
+    }
+
+    return categories;
+  };
+
   // Filter categories based on search
   const getFilteredCategories = () => {
-    const categories =
-      activeTab === "EXPENSE" ? expenseCategories : incomeCategories;
+    const categories = getCategoriesToDisplay();
     if (!searchText.trim()) return categories;
 
     const lowerSearch = searchText.toLowerCase();
@@ -229,12 +281,30 @@ const CategoriesPage = () => {
 
   const filteredCategories = getFilteredCategories();
 
+  // Check if category is default
+  const isDefaultCategory = (category) => {
+    const defaults =
+      activeTab === "EXPENSE"
+        ? defaultExpenseCategories
+        : defaultIncomeCategories;
+    return (
+      defaults.some((dc) => dc.id === category.id) || category.isSystemDefault
+    );
+  };
+
   // Handle Open Modal
-  const handleOpenModal = async (category = null) => {
+  const handleOpenModal = async (category = null, isDefault = false) => {
+    setIsEditingDefault(isDefault);
+
     if (category) {
       // Fetch full category data if needed
       try {
-        const fullCategory = await getCategoryById(category.id);
+        let fullCategory;
+        if (isDefault) {
+          fullCategory = await getDefaultCategoryById(category.id);
+        } else {
+          fullCategory = await getCategoryById(category.id);
+        }
         setEditingCategory(fullCategory);
         setFormData({
           name: fullCategory.name || "",
@@ -259,6 +329,7 @@ const CategoriesPage = () => {
       }
     } else {
       setEditingCategory(null);
+      setIsEditingDefault(false);
       setFormData({
         name: "",
         icon: ICON_OPTIONS[activeTab][0],
@@ -301,35 +372,49 @@ const CategoriesPage = () => {
           updatedAt: new Date().toISOString(),
         };
 
-        // Only allow updating isSystemDefault if it was already system default
-        if (editingCategory.isSystemDefault) {
-          updateData.isSystemDefault = formData.isSystemDefault;
+        if (isEditingDefault) {
+          // Update default category
+          await updateDefaultCategory(editingCategory.id, updateData);
+          message.success({
+            content: "Cập nhật danh mục mặc định thành công!",
+            duration: 2,
+          });
+        } else {
+          // Update user category
+          await updateCategory(editingCategory.id, updateData);
+          message.success({
+            content: "Cập nhật danh mục thành công!",
+            duration: 2,
+          });
         }
-
-        await updateCategory(editingCategory.id, updateData);
-        message.success({
-          content: "Cập nhật danh mục thành công!",
-          duration: 2,
-        });
       } else {
         // Create new category
-        const newCategory = {
-          name: formData.name.trim(),
-          icon: formData.icon,
-          color: formData.color,
-          type: activeTab,
-          displayOrder: formData.displayOrder ?? filteredCategories.length,
-          isSystemDefault: formData.isSystemDefault,
-          keywords: formData.keywords || [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
+        if (isEditingDefault) {
+          // Create default category (should not happen in normal flow, but allow it)
+          message.warning(
+            "Vui lòng sử dụng chức năng 'Tải danh mục mặc định' để thêm danh mục mặc định"
+          );
+          return;
+        } else {
+          // Create user category
+          const newCategory = {
+            name: formData.name.trim(),
+            icon: formData.icon,
+            color: formData.color,
+            type: activeTab,
+            displayOrder: formData.displayOrder ?? filteredCategories.length,
+            isSystemDefault: false,
+            keywords: formData.keywords || [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
 
-        await addCategory(newCategory);
-        message.success({
-          content: "Thêm danh mục mới thành công!",
-          duration: 2,
-        });
+          await addCategory(newCategory);
+          message.success({
+            content: "Thêm danh mục mới thành công!",
+            duration: 2,
+          });
+        }
       }
 
       setModalVisible(false);
@@ -350,14 +435,43 @@ const CategoriesPage = () => {
   };
 
   // Handle Delete
-  const handleDelete = async (categoryId, categoryName) => {
+  const handleDelete = async (categoryId, categoryName, isDefault = false) => {
     try {
-      await deleteCategory(categoryId);
-      message.success(`Đã xóa danh mục "${categoryName}"`);
+      if (isDefault) {
+        await deleteDefaultCategory(categoryId);
+        message.success(`Đã xóa danh mục mặc định "${categoryName}"`);
+      } else {
+        await deleteCategory(categoryId);
+        message.success(`Đã xóa danh mục "${categoryName}"`);
+      }
       await loadCategories();
     } catch (err) {
       console.error("Delete error:", err);
       message.error(`Không thể xóa: ${err.message || "Lỗi không xác định"}`);
+    }
+  };
+
+  // Handle Upload Default Categories
+  const handleUploadDefaultCategories = async () => {
+    try {
+      setLoading(true);
+      const categoriesToUpload =
+        activeTab === "EXPENSE"
+          ? DEFAULT_EXPENSE_CATEGORIES
+          : DEFAULT_INCOME_CATEGORIES;
+
+      await uploadDefaultCategories(categoriesToUpload);
+      message.success(
+        `Đã tải ${categoriesToUpload.length} danh mục mặc định thành công!`
+      );
+      await loadCategories();
+    } catch (err) {
+      console.error("Upload error:", err);
+      message.error(
+        `Lỗi khi tải danh mục mặc định: ${err.message || "Lỗi không xác định"}`
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -388,16 +502,19 @@ const CategoriesPage = () => {
       title: "Tên danh mục",
       dataIndex: "name",
       key: "name",
-      render: (text, record) => (
-        <Space>
-          <span style={{ fontWeight: 500 }}>{text}</span>
-          {record.isSystemDefault && (
-            <Tag color="green" size="small">
-              Mặc định
-            </Tag>
-          )}
-        </Space>
-      ),
+      render: (text, record) => {
+        const isDefault = isDefaultCategory(record);
+        return (
+          <Space>
+            <span style={{ fontWeight: 500 }}>{text}</span>
+            {isDefault && (
+              <Tag color="green" size="small" icon={<LockOutlined />}>
+                Mặc định
+              </Tag>
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: "Màu sắc",
@@ -534,6 +651,21 @@ const CategoriesPage = () => {
             >
               Làm mới
             </Button>
+            <Popconfirm
+              title="Tải danh mục mặc định"
+              description={`Bạn có muốn tải ${
+                activeTab === "EXPENSE"
+                  ? DEFAULT_EXPENSE_CATEGORIES.length
+                  : DEFAULT_INCOME_CATEGORIES.length
+              } danh mục mặc định ${
+                activeTab === "EXPENSE" ? "chi tiêu" : "thu nhập"
+              }?`}
+              onConfirm={handleUploadDefaultCategories}
+              okText="Tải"
+              cancelText="Hủy"
+            >
+              <Button icon={<LockOutlined />}>Tải danh mục mặc định</Button>
+            </Popconfirm>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -545,29 +677,68 @@ const CategoriesPage = () => {
         }
         style={{ marginBottom: 24 }}
       >
-        <Space>
-          <span>Hiển thị:</span>
-          <Button
-            type={viewMode === "grid" ? "primary" : "default"}
-            onClick={() => setViewMode("grid")}
-            size="small"
-          >
-            Lưới
-          </Button>
-          <Button
-            type={viewMode === "table" ? "primary" : "default"}
-            onClick={() => setViewMode("table")}
-            size="small"
-          >
-            Bảng
-          </Button>
+        <Space wrap>
+          <Space>
+            <span>Hiển thị:</span>
+            <Button
+              type={viewMode === "grid" ? "primary" : "default"}
+              onClick={() => setViewMode("grid")}
+              size="small"
+            >
+              Lưới
+            </Button>
+            <Button
+              type={viewMode === "table" ? "primary" : "default"}
+              onClick={() => setViewMode("table")}
+              size="small"
+            >
+              Bảng
+            </Button>
+          </Space>
+          <Divider type="vertical" />
+          <Space>
+            <span>Loại danh mục:</span>
+            <Button
+              type={categoryView === "all" ? "primary" : "default"}
+              onClick={() => setCategoryView("all")}
+              size="small"
+            >
+              Tất cả
+            </Button>
+            <Button
+              type={categoryView === "default" ? "primary" : "default"}
+              onClick={() => setCategoryView("default")}
+              size="small"
+              icon={<LockOutlined />}
+            >
+              Mặc định (
+              {activeTab === "EXPENSE"
+                ? defaultExpenseCategories.length
+                : defaultIncomeCategories.length}
+              )
+            </Button>
+            <Button
+              type={categoryView === "user" ? "primary" : "default"}
+              onClick={() => setCategoryView("user")}
+              size="small"
+            >
+              Người dùng (
+              {activeTab === "EXPENSE"
+                ? expenseCategories.length
+                : incomeCategories.length}
+              )
+            </Button>
+          </Space>
         </Space>
       </Card>
 
       {/* Tabs */}
       <Tabs
         activeKey={activeTab}
-        onChange={setActiveTab}
+        onChange={(key) => {
+          setActiveTab(key);
+          setCategoryView("all"); // Reset view when switching tabs
+        }}
         size="large"
         tabBarStyle={{ marginBottom: 24 }}
         items={[
@@ -576,7 +747,13 @@ const CategoriesPage = () => {
             label: (
               <Space>
                 <RiseOutlined />
-                Chi tiêu ({expenseCategories.length})
+                Chi tiêu (
+                {categoryView === "default"
+                  ? defaultExpenseCategories.length
+                  : categoryView === "user"
+                  ? expenseCategories.length
+                  : defaultExpenseCategories.length + expenseCategories.length}
+                )
               </Space>
             ),
           },
@@ -585,7 +762,13 @@ const CategoriesPage = () => {
             label: (
               <Space>
                 <FallOutlined />
-                Thu nhập ({incomeCategories.length})
+                Thu nhập (
+                {categoryView === "default"
+                  ? defaultIncomeCategories.length
+                  : categoryView === "user"
+                  ? incomeCategories.length
+                  : defaultIncomeCategories.length + incomeCategories.length}
+                )
               </Space>
             ),
           },
@@ -631,73 +814,76 @@ const CategoriesPage = () => {
         </Card>
       ) : (
         <Row gutter={[16, 16]}>
-          {filteredCategories.map((category) => (
-            <Col xs={24} sm={12} md={8} lg={6} key={category.id}>
-              <Card
-                className="category-card"
-                hoverable
-                style={{
-                  borderLeft: `4px solid ${category.color}`,
-                }}
-                actions={[
-                  <Tooltip title="Chỉnh sửa" key="edit">
-                    <EditOutlined onClick={() => handleOpenModal(category)} />
-                  </Tooltip>,
-                  <Popconfirm
-                    key="delete"
-                    title="Xóa danh mục"
-                    description={`Bạn có chắc muốn xóa "${category.name}"?`}
-                    onConfirm={() => handleDelete(category.id, category.name)}
-                    okText="Xóa"
-                    cancelText="Hủy"
-                    okButtonProps={{ danger: true }}
-                    disabled={category.isSystemDefault}
-                  >
-                    <Tooltip
-                      title={
-                        category.isSystemDefault
-                          ? "Không thể xóa danh mục mặc định"
-                          : "Xóa"
-                      }
-                    >
-                      <DeleteOutlined
-                        style={{
-                          color: category.isSystemDefault
-                            ? "#d9d9d9"
-                            : "#ff4d4f",
-                        }}
-                        disabled={category.isSystemDefault}
+          {filteredCategories.map((category) => {
+            const isDefault = isDefaultCategory(category);
+            return (
+              <Col xs={24} sm={12} md={8} lg={6} key={category.id}>
+                <Card
+                  className="category-card"
+                  hoverable
+                  style={{
+                    borderLeft: `4px solid ${category.color}`,
+                  }}
+                  actions={[
+                    <Tooltip title="Chỉnh sửa" key="edit">
+                      <EditOutlined
+                        onClick={() => handleOpenModal(category, isDefault)}
                       />
-                    </Tooltip>
-                  </Popconfirm>,
-                ]}
-              >
-                <div className="category-header">
-                  <div
-                    className="category-icon"
-                    style={{ backgroundColor: `${category.color}20` }}
-                  >
-                    <span style={{ fontSize: 32 }}>{category.icon}</span>
+                    </Tooltip>,
+                    <Popconfirm
+                      key="delete"
+                      title="Xóa danh mục"
+                      description={`Bạn có chắc muốn xóa "${category.name}"?`}
+                      onConfirm={() =>
+                        handleDelete(category.id, category.name, isDefault)
+                      }
+                      okText="Xóa"
+                      cancelText="Hủy"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Tooltip
+                        title={
+                          isDefault ? "Xóa danh mục mặc định" : "Xóa danh mục"
+                        }
+                      >
+                        <DeleteOutlined
+                          style={{
+                            color: "#ff4d4f",
+                          }}
+                        />
+                      </Tooltip>
+                    </Popconfirm>,
+                  ]}
+                >
+                  <div className="category-header">
+                    <div
+                      className="category-icon"
+                      style={{ backgroundColor: `${category.color}20` }}
+                    >
+                      <span style={{ fontSize: 32 }}>{category.icon}</span>
+                    </div>
                   </div>
-                </div>
 
-                <h3 className="category-name">{category.name}</h3>
+                  <h3 className="category-name">{category.name}</h3>
 
-                <Space wrap style={{ marginTop: 8 }}>
-                  <Tag color="blue">{category.count || 0} giao dịch</Tag>
-                  {category.isSystemDefault && (
-                    <Tag color="green">Mặc định</Tag>
-                  )}
-                  <Tag>Thứ tự: {category.displayOrder ?? 0}</Tag>
-                </Space>
+                  <Space wrap style={{ marginTop: 8 }}>
+                    <Tag color="blue">{category.count || 0} giao dịch</Tag>
+                    {isDefault && (
+                      <Tag color="green" icon={<LockOutlined />}>
+                        Mặc định
+                      </Tag>
+                    )}
+                    <Tag>Thứ tự: {category.displayOrder ?? 0}</Tag>
+                  </Space>
 
-                <div
-                  className="category-color-bar"
-                  style={{ backgroundColor: category.color }}
-                />
-              </Card>
-            </Col>
-          ))}
+                  <div
+                    className="category-color-bar"
+                    style={{ backgroundColor: category.color }}
+                  />
+                </Card>
+              </Col>
+            );
+          })}
         </Row>
       )}
 

@@ -1,0 +1,119 @@
+.database-management-page {
+  padding: 0;
+}
+
+.database-management-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.database-management-page .header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.database-management-page .header-icon {
+  font-size: 32px;
+  color: #1890ff;
+}
+
+.database-management-page .page-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0;
+  color: #262626;
+}
+
+.database-management-page .page-description {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin: 4px 0 0 0;
+}
+
+.database-management-page .collection-selector {
+  margin-bottom: 24px;
+}
+
+.database-management-page .collection-data-table {
+  margin-top: 24px;
+}
+
+.collection-data-table .table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.collection-data-table .ant-table {
+  background: white;
+}
+
+.collection-data-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.collection-data-table .ant-table-tbody > tr:hover > td {
+  background: #f5f5f5;
+}
+
+.collection-data-table .ant-table-selection-column {
+  width: 60px;
+}
+
+.collection-data-table .table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.collection-data-table .table-header .ant-space {
+  flex-wrap: wrap;
+}
+
+.collection-data-table .selected-count {
+  color: #1890ff;
+  font-weight: 500;
+  padding: 0 8px;
+}
+
+.collection-data-table .ant-table-tbody > tr.ant-table-row-selected > td {
+  background: #e6f7ff;
+}
+
+.collection-data-table .ant-table-tbody > tr.ant-table-row-selected:hover > td {
+  background: #bae7ff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .database-management-page .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .collection-data-table .table-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .collection-data-table .table-header .ant-space {
+    width: 100%;
+  }
+
+  .collection-data-table .table-header .ant-btn {
+    width: 100%;
+  }
+}
+

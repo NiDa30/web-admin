@@ -2,12 +2,18 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Database, User, Lock, Eye, EyeOff, Mail } from "lucide-react";
 import { FaGoogle } from "react-icons/fa";
+import { message } from "antd";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
   createUserWithEmailAndPassword,
+  signOut,
 } from "firebase/auth";
-import { auth, googleProvider } from "../firebase";
+import { auth, googleProvider, db } from "../firebase";
+import { COLLECTIONS } from "../constants/collections";
+import { doc, updateDoc, Timestamp } from "firebase/firestore";
+import userService from "../services/userService";
+import notificationService from "../services/notificationService";
 
 const LoginPage = ({ onLogin }) => {
   const navigate = useNavigate();
@@ -32,16 +38,171 @@ const LoginPage = ({ onLogin }) => {
         email,
         password
       );
+
+      // Check if this is Super Admin email
+      const isSuperAdminEmail = userService.isSuperAdminEmail(email);
+      console.log("🔍 Login attempt - Is Super Admin:", {
+        email,
+        isSuperAdminEmail
+      });
+
+      // Check if user exists in Firestore and their status
+      let userData = await userService.getUserByEmail(email);
+      
+      console.log("🔍 Login attempt - User data:", {
+        email,
+        userData: userData ? {
+          id: userData.id,
+          email: userData.email,
+          accountStatus: userData.accountStatus,
+          role: userData.role,
+          isSuperAdmin: userData.isSuperAdmin
+        } : null
+      });
+      
+      // If Super Admin doesn't exist in Firestore, create them automatically
+      if (!userData && isSuperAdminEmail) {
+        console.log("🆕 Super Admin not found in Firestore, creating automatically...");
+        try {
+          const newUserId = await userService.createUser(
+            {
+              email: email,
+              name: email.split("@")[0],
+              phoneNumber: null,
+            },
+            true, // isAdmin = true
+            null // createdBy = null (system created)
+          );
+          
+          // Update to set isSuperAdmin flag and ensure ACTIVE status
+          const { doc, updateDoc, Timestamp } = await import("firebase/firestore");
+          const { db } = await import("../firebase");
+          const { COLLECTIONS } = await import("../constants/collections");
+          const userRef = doc(db, COLLECTIONS.USERS, newUserId);
+          await updateDoc(userRef, {
+            isSuperAdmin: true,
+            accountStatus: "ACTIVE",
+            role: "ADMIN",
+            updatedAt: Timestamp.now(),
+          });
+          
+          // Reload user data
+          userData = await userService.getUserByEmail(email);
+          console.log("✅ Super Admin created successfully:", userData);
+        } catch (createError) {
+          console.error("❌ Error creating Super Admin:", createError);
+          await signOut(auth);
+          setError("Không thể tạo tài khoản Super Admin. Vui lòng liên hệ quản trị viên.");
+          setLoading(false);
+          return;
+        }
+      }
+      
+      if (!userData) {
+        // User doesn't exist in Firestore and is not Super Admin, sign out and show error
+        console.error("❌ User not found in Firestore");
+        await signOut(auth);
+        setError("Tài khoản chưa được đăng ký trong hệ thống. Vui lòng đăng ký trước.");
+        setLoading(false);
+        return;
+      }
+
+      // Check account status - Default to ACTIVE if not set (for backward compatibility)
+      // Super Admin always allowed to login regardless of status
+      const accountStatus = userData.accountStatus || "ACTIVE";
+      
+      console.log("🔍 Account status check:", {
+        email,
+        accountStatus,
+        isSuperAdmin: isSuperAdminEmail || userData.isSuperAdmin,
+        isPending: accountStatus === "PENDING",
+        isLocked: accountStatus === "LOCKED",
+        isActive: accountStatus === "ACTIVE"
+      });
+
+      // Super Admin can always login, skip status checks
+      if (!isSuperAdminEmail && !userData.isSuperAdmin) {
+        if (accountStatus === "PENDING") {
+          console.warn("⚠️ Account is PENDING, blocking login");
+          await signOut(auth);
+          setError("Tài khoản của bạn đang chờ phê duyệt từ quản trị viên. Vui lòng thử lại sau.");
+          setLoading(false);
+          return;
+        }
+
+        if (accountStatus === "LOCKED") {
+          console.warn("⚠️ Account is LOCKED, blocking login");
+          await signOut(auth);
+          setError("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
+          setLoading(false);
+          return;
+        }
+
+        // Only allow ACTIVE accounts (or accounts without status set)
+        if (accountStatus !== "ACTIVE") {
+          console.error("❌ Invalid account status:", accountStatus);
+          await signOut(auth);
+          setError("Tài khoản của bạn không thể đăng nhập. Vui lòng liên hệ quản trị viên.");
+          setLoading(false);
+          return;
+        }
+      } else {
+        console.log("✅ Super Admin login - skipping status checks");
+        // Ensure Super Admin has ACTIVE status
+        if (accountStatus !== "ACTIVE") {
+          try {
+            const { doc, updateDoc, Timestamp } = await import("firebase/firestore");
+            const { db } = await import("../firebase");
+            const { COLLECTIONS } = await import("../constants/collections");
+            const userRef = doc(db, COLLECTIONS.USERS, userData.id);
+            await updateDoc(userRef, {
+              accountStatus: "ACTIVE",
+              isSuperAdmin: true,
+              role: "ADMIN",
+              updatedAt: Timestamp.now(),
+            });
+            userData.accountStatus = "ACTIVE";
+            userData.isSuperAdmin = true;
+            userData.role = "ADMIN";
+            console.log("✅ Super Admin status updated to ACTIVE");
+          } catch (updateError) {
+            console.warn("⚠️ Failed to update Super Admin status:", updateError);
+          }
+        }
+      }
+
+      console.log("✅ Account status is ACTIVE, proceeding with login");
+
+      // Update last login time
+      try {
+        const { doc, updateDoc, Timestamp } = await import("firebase/firestore");
+        const { db } = await import("../firebase");
+        const { COLLECTIONS } = await import("../constants/collections");
+        const userRef = doc(db, COLLECTIONS.USERS, userData.id);
+        await updateDoc(userRef, {
+          lastLoginTime: Timestamp.now(),
+        });
+        console.log("✅ Last login time updated");
+      } catch (updateError) {
+        console.warn("⚠️ Failed to update last login time:", updateError);
+        // Don't fail login if update fails
+      }
+
+      // Set authentication flag
       localStorage.setItem("isAuth", "true");
+      console.log("✅ Authentication flag set in localStorage");
 
       // Gọi callback onLogin nếu có
       if (onLogin) {
-        const name = userCredential.user.displayName || email.split("@")[0];
+        const name = userData.name || userCredential.user.displayName || email.split("@")[0];
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
         onLogin(email, capitalizedName);
+        console.log("✅ onLogin callback called");
       }
 
-      navigate("/admin/users");
+      // Navigate to admin page
+      console.log("🚀 Navigating to /admin/users");
+      navigate("/admin/users", { replace: true });
     } catch (error) {
       let errorMessage = "Đăng nhập thất bại!";
 
@@ -53,6 +214,8 @@ const LoginPage = ({ onLogin }) => {
         errorMessage = "Email hoặc mật khẩu không chính xác!";
       } else if (error.code === "auth/invalid-email") {
         errorMessage = "Email không hợp lệ!";
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       setError(errorMessage);
@@ -79,22 +242,78 @@ const LoginPage = ({ onLogin }) => {
     setLoading(true);
 
     try {
+      // 1. Create Firebase Authentication account
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
         password
       );
-      localStorage.setItem("isAuth", "true");
+      
+      const firebaseUserId = userCredential.user.uid;
+      const userName = email.split("@")[0];
+      const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
-      // Gọi callback onLogin nếu có
-      if (onLogin) {
-        const name = email.split("@")[0];
-        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
-        onLogin(email, capitalizedName);
+      // 2. Check if user already exists in Firestore
+      const existingUser = await userService.getUserByEmail(email);
+      if (existingUser) {
+        // User already exists in Firestore, sign out and show error
+        await signOut(auth);
+        setError("Email đã được sử dụng trong hệ thống!");
+        setLoading(false);
+        return;
       }
 
-      navigate("/admin/users");
+      // 3. Create user in Firestore with PENDING status (waiting for admin approval)
+      const newUserId = await userService.createUser(
+        {
+          email: email,
+          name: capitalizedName,
+          phoneNumber: null,
+        },
+        false, // Regular user, not admin
+        null // Created by self (registration)
+      );
+
+      // 4. Send notification to Super Admin
+      try {
+        await notificationService.createNewUserRegistrationNotification(
+          email,
+          capitalizedName,
+          newUserId
+        );
+        console.log("✅ Notification sent to Super Admin");
+      } catch (notifError) {
+        console.warn("⚠️ Failed to send notification to Super Admin:", notifError);
+        // Don't fail registration if notification fails
+      }
+
+      // 5. Sign out the user (they need to wait for admin approval)
+      await signOut(auth);
+      localStorage.removeItem("isAuth");
+
+      // 6. Show success message
+      message.success({
+        content: "Đăng ký thành công! Tài khoản của bạn đang chờ phê duyệt từ quản trị viên. Vui lòng đăng nhập sau khi được phê duyệt.",
+        duration: 8,
+      });
+
+      // 7. Clear form and switch to login mode
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setIsRegisterMode(false);
+      setError("");
+
+      // Show info message
+      setTimeout(() => {
+        message.info({
+          content: "Thông báo đã được gửi đến quản trị viên. Bạn sẽ nhận được email khi tài khoản được phê duyệt.",
+          duration: 6,
+        });
+      }, 1000);
+
     } catch (error) {
+      console.error("Registration error:", error);
       let errorMessage = "Đăng ký thất bại!";
 
       if (error.code === "auth/email-already-in-use") {
@@ -103,9 +322,20 @@ const LoginPage = ({ onLogin }) => {
         errorMessage = "Email không hợp lệ!";
       } else if (error.code === "auth/weak-password") {
         errorMessage = "Mật khẩu quá yếu! Cần ít nhất 6 ký tự.";
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       setError(errorMessage);
+      
+      // Try to sign out if user was created but Firestore creation failed
+      try {
+        if (auth.currentUser) {
+          await signOut(auth);
+        }
+      } catch (signOutError) {
+        console.error("Error signing out:", signOutError);
+      }
     } finally {
       setLoading(false);
     }

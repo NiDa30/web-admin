@@ -525,3 +525,150 @@ export const userHasCategories = async (userId) => {
     throw error;
   }
 };
+
+// ===================================================================
+// 🏛️ DEFAULT CATEGORIES (Admin managed - CATEGORIES_DEFAULT)
+// ===================================================================
+
+/**
+ * Get all default categories by type
+ * @param {string} type - 'EXPENSE' or 'INCOME'
+ * @returns {Promise<Array>} List of default categories
+ */
+export const getDefaultCategoriesByType = async (type) => {
+  try {
+    const categoriesRef = collection(db, COLLECTIONS.CATEGORIES_DEFAULT);
+    const normalizedType = type.toUpperCase();
+
+    let querySnapshot;
+    try {
+      const q = query(
+        categoriesRef,
+        where("type", "==", normalizedType),
+        orderBy("displayOrder", "asc")
+      );
+      querySnapshot = await getDocs(q);
+    } catch (indexError) {
+      console.warn("OrderBy index missing, fetching without order:", indexError.message);
+      const q = query(categoriesRef, where("type", "==", normalizedType));
+      querySnapshot = await getDocs(q);
+    }
+
+    const categories = [];
+    querySnapshot.forEach((doc) => {
+      categories.push({
+        id: doc.id,
+        ...doc.data(),
+      });
+    });
+
+    categories.sort((a, b) => {
+      const orderA = a.displayOrder ?? a.order ?? 999;
+      const orderB = b.displayOrder ?? b.order ?? 999;
+      return orderA - orderB;
+    });
+
+    return categories;
+  } catch (error) {
+    console.error("Error getting default categories:", error);
+    throw error;
+  }
+};
+
+/**
+ * Upload default categories in bulk (admin only)
+ * @param {Array} categoriesData - Array of category data
+ * @returns {Promise<Array>} Array of created categories
+ */
+export const uploadDefaultCategories = async (categoriesData) => {
+  try {
+    const { writeBatch, doc, setDoc } = await import("firebase/firestore");
+    const batch = writeBatch(db);
+
+    categoriesData.forEach((categoryData) => {
+      const categoryId = categoryData.categoryID || categoryData.id;
+      const docRef = doc(db, COLLECTIONS.CATEGORIES_DEFAULT, categoryId);
+
+      const newCategory = {
+        ...categoryData,
+        isSystemDefault: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Remove id/categoryID from data before saving
+      delete newCategory.id;
+      delete newCategory.categoryID;
+
+      batch.set(docRef, newCategory, { merge: true });
+    });
+
+    await batch.commit();
+    console.log(`✅ Uploaded ${categoriesData.length} default categories`);
+    return categoriesData.map((cat) => ({
+      id: cat.categoryID || cat.id,
+      ...cat,
+    }));
+  } catch (error) {
+    console.error("Error uploading default categories:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update default category (admin only)
+ * @param {string} categoryId - Category ID
+ * @param {Object} updateData - Update data
+ * @returns {Promise<void>}
+ */
+export const updateDefaultCategory = async (categoryId, updateData) => {
+  try {
+    const categoryRef = doc(db, COLLECTIONS.CATEGORIES_DEFAULT, categoryId);
+    await updateDoc(categoryRef, {
+      ...updateData,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error updating default category:", error);
+    throw error;
+  }
+};
+
+/**
+ * Delete default category (admin only)
+ * @param {string} categoryId - Category ID
+ * @returns {Promise<void>}
+ */
+export const deleteDefaultCategory = async (categoryId) => {
+  try {
+    const categoryRef = doc(db, COLLECTIONS.CATEGORIES_DEFAULT, categoryId);
+    await deleteDoc(categoryRef);
+  } catch (error) {
+    console.error("Error deleting default category:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get default category by ID
+ * @param {string} categoryId - Category ID
+ * @returns {Promise<Object>} Category data
+ */
+export const getDefaultCategoryById = async (categoryId) => {
+  try {
+    const categoryRef = doc(db, COLLECTIONS.CATEGORIES_DEFAULT, categoryId);
+    const categorySnap = await getDoc(categoryRef);
+
+    if (categorySnap.exists()) {
+      return {
+        id: categorySnap.id,
+        ...categorySnap.data(),
+      };
+    } else {
+      throw new Error("Default category not found");
+    }
+  } catch (error) {
+    console.error("Error getting default category:", error);
+    throw error;
+  }
+};

@@ -8,10 +8,11 @@
  */
 
 export const COLLECTIONS = {
-  // Core entities (PLURAL)
-  USERS: "USER", // ✅ Đổi từ USER → USERS
-  CATEGORIES: "CATEGORY",
-  TRANSACTIONS: "TRANSACTION",
+  // Core entities
+  USERS: "USER",
+  CATEGORIES: "CATEGORIES",
+  CATEGORIES_DEFAULT: "CATEGORIES_DEFAULT",
+  TRANSACTIONS: "TRANSACTIONS",
   BUDGETS: "BUDGET",
   GOALS: "GOAL",
 
@@ -29,8 +30,8 @@ export const COLLECTIONS = {
   ATTACHMENTS: "ATTACHMENT",
 
   // Payment & Merchants
-  PAYMENT_METHODS: "PAYMENT_METHHOD",
-  MERCHANTS: "MERCHART",
+  PAYMENT_METHODS: "PAYMENT_METHHOD", // Note: Firebase has typo
+  MERCHANTS: "MERCHART", // Note: Firebase has typo
 
   // Tags & Organization
   TAGS: "TAG",
@@ -41,6 +42,9 @@ export const COLLECTIONS = {
   REPORTS: "REPORT",
   APP_SETTINGS: "APP_SETTINGS",
   CATEGORY_BUDGET_TEMPLATES: "CATEGORY_BUDGET_TEMPLATE",
+
+  // Expenses (lowercase collection name)
+  EXPENSES: "expenses",
 };
 
 // Freeze object để prevent modification

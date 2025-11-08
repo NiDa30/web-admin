@@ -23,6 +23,12 @@ import {
   FallOutlined,
   PieChartOutlined,
   LineChartOutlined,
+  DatabaseOutlined,
+  SyncOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
+  ApiOutlined,
 } from "@ant-design/icons";
 import {
   LineChart,
@@ -75,6 +81,21 @@ const DashboardPage = () => {
       monthlyTrends: [],
       categoryStats: [],
     },
+    collections: {},
+    sync: {
+      total: 0,
+      success: 0,
+      failed: 0,
+      conflicts: 0,
+      lastSyncTime: null,
+      successRate: 0,
+    },
+    system: {
+      firebaseConnected: false,
+      collectionsAccessible: false,
+      lastChecked: null,
+      errors: [],
+    },
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -117,7 +138,48 @@ const DashboardPage = () => {
     }
   };
 
-  const { stats, charts } = dashboardData;
+  const { stats, charts, collections, sync, system } = dashboardData;
+
+  // Format last sync time
+  const formatLastSyncTime = (date) => {
+    if (!date) return "Chưa có";
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000); // seconds
+
+    if (diff < 60) return "Vừa xong";
+    if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+    return `${Math.floor(diff / 86400)} ngày trước`;
+  };
+
+  // Get collection display name
+  const getCollectionDisplayName = (collectionName) => {
+    const names = {
+      USER: "Người dùng",
+      CATEGORIES: "Danh mục",
+      CATEGORIES_DEFAULT: "Danh mục mặc định",
+      TRANSACTIONS: "Giao dịch",
+      BUDGET: "Ngân sách",
+      GOAL: "Mục tiêu",
+      RECURRING_TXN: "Giao dịch định kỳ",
+      BUDGET_HISTORY: "Lịch sử ngân sách",
+      GOAL_CONTRIBUTION: "Đóng góp mục tiêu",
+      SYNC_LOG: "Nhật ký đồng bộ",
+      NOTIFICATION: "Thông báo",
+      DEVICE: "Thiết bị",
+      ATTACHMENT: "Tệp đính kèm",
+      PAYMENT_METHHOD: "Phương thức thanh toán",
+      MERCHART: "Cửa hàng",
+      TAG: "Thẻ",
+      TRANSACTION_TAG: "Thẻ giao dịch",
+      SPLIT_TRANSACTION: "Giao dịch chia",
+      REPORT: "Báo cáo",
+      APP_SETTINGS: "Cài đặt ứng dụng",
+      CATEGORY_BUDGET_TEMPLATE: "Mẫu ngân sách",
+      expenses: "Chi tiêu",
+    };
+    return names[collectionName] || collectionName;
+  };
 
   // Render Loading
   if (loading) {
@@ -168,6 +230,80 @@ const DashboardPage = () => {
         }
         style={{ marginBottom: 24 }}
       />
+
+      {/* System Status */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} lg={8}>
+          <Card className="stat-card" hoverable>
+            <Statistic
+              title="Trạng thái Firebase"
+              value={system.firebaseConnected ? "Đã kết nối" : "Mất kết nối"}
+              prefix={
+                system.firebaseConnected ? (
+                  <CheckCircleOutlined style={{ color: "#52c41a" }} />
+                ) : (
+                  <CloseCircleOutlined style={{ color: "#ff4d4f" }} />
+                )
+              }
+              valueStyle={{
+                color: system.firebaseConnected ? "#52c41a" : "#ff4d4f",
+                fontSize: 16,
+              }}
+            />
+            <div style={{ marginTop: 8, fontSize: 12, color: "#999" }}>
+              {system.lastChecked
+                ? `Kiểm tra lúc: ${system.lastChecked.toLocaleTimeString(
+                    "vi-VN"
+                  )}`
+                : "Chưa kiểm tra"}
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={8}>
+          <Card className="stat-card" hoverable>
+            <Statistic
+              title="Đồng bộ thành công"
+              value={`${sync.successRate}%`}
+              prefix={<SyncOutlined style={{ color: "#1890ff" }} />}
+              suffix={
+                <Tag
+                  color={
+                    sync.successRate >= 90
+                      ? "green"
+                      : sync.successRate >= 70
+                      ? "orange"
+                      : "red"
+                  }
+                >
+                  {sync.success}/{sync.total}
+                </Tag>
+              }
+              valueStyle={{ color: "#1890ff" }}
+            />
+            <div style={{ marginTop: 8, fontSize: 12, color: "#999" }}>
+              {sync.lastSyncTime
+                ? `Lần cuối: ${formatLastSyncTime(sync.lastSyncTime)}`
+                : "Chưa có đồng bộ"}
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={8}>
+          <Card className="stat-card" hoverable>
+            <Statistic
+              title="Tổng số collection"
+              value={Object.keys(collections).length}
+              prefix={<DatabaseOutlined style={{ color: "#722ed1" }} />}
+              valueStyle={{ color: "#722ed1" }}
+            />
+            <div style={{ marginTop: 8, fontSize: 12, color: "#999" }}>
+              Tổng số bản ghi:{" "}
+              {Object.values(collections).reduce((a, b) => a + b, 0)}
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -459,6 +595,123 @@ const DashboardPage = () => {
           />
         )}
       </Card>
+
+      {/* Collection Statistics */}
+      <Card
+        title={
+          <Space>
+            <DatabaseOutlined style={{ color: "#1890ff" }} />
+            Thống kê Collection
+          </Space>
+        }
+        style={{ marginTop: 16 }}
+      >
+        <Row gutter={[16, 16]}>
+          {Object.entries(collections)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 12)
+            .map(([collectionName, count]) => (
+              <Col xs={24} sm={12} lg={8} xl={6} key={collectionName}>
+                <Card size="small" hoverable>
+                  <Space
+                    direction="vertical"
+                    size={4}
+                    style={{ width: "100%" }}
+                  >
+                    <Space>
+                      <ApiOutlined style={{ color: "#1890ff" }} />
+                      <strong style={{ fontSize: 14 }}>
+                        {getCollectionDisplayName(collectionName)}
+                      </strong>
+                    </Space>
+                    <Statistic
+                      value={count}
+                      prefix={<DatabaseOutlined />}
+                      valueStyle={{ fontSize: 20, fontWeight: "bold" }}
+                    />
+                    <div style={{ fontSize: 11, color: "#999" }}>
+                      {collectionName}
+                    </div>
+                  </Space>
+                </Card>
+              </Col>
+            ))}
+        </Row>
+      </Card>
+
+      {/* Sync Status */}
+      {sync.total > 0 && (
+        <Card
+          title={
+            <Space>
+              <SyncOutlined style={{ color: "#1890ff" }} />
+              Trạng thái Đồng bộ
+            </Space>
+          }
+          style={{ marginTop: 16 }}
+        >
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} lg={6}>
+              <Card size="small">
+                <Statistic
+                  title="Tổng số đồng bộ"
+                  value={sync.total}
+                  prefix={<SyncOutlined />}
+                  valueStyle={{ color: "#1890ff" }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card size="small">
+                <Statistic
+                  title="Thành công"
+                  value={sync.success}
+                  prefix={<CheckCircleOutlined />}
+                  valueStyle={{ color: "#52c41a" }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card size="small">
+                <Statistic
+                  title="Thất bại"
+                  value={sync.failed}
+                  prefix={<CloseCircleOutlined />}
+                  valueStyle={{ color: "#ff4d4f" }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card size="small">
+                <Statistic
+                  title="Xung đột"
+                  value={sync.conflicts}
+                  prefix={<WarningOutlined />}
+                  valueStyle={{ color: "#faad14" }}
+                />
+              </Card>
+            </Col>
+          </Row>
+          {sync.lastSyncTime && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 12,
+                backgroundColor: "#f0f0f0",
+                borderRadius: 4,
+              }}
+            >
+              <Space>
+                <ClockCircleOutlined />
+                <span>
+                  Lần đồng bộ cuối: {sync.lastSyncTime.toLocaleString("vi-VN")}{" "}
+                  ({formatLastSyncTime(sync.lastSyncTime)})
+                </span>
+              </Space>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 };
