@@ -18,6 +18,10 @@ import {
   message,
   Radio,
   Divider,
+  Modal,
+  Input,
+  List,
+  Popconfirm,
 } from "antd";
 import {
   BarChartOutlined,
@@ -31,6 +35,9 @@ import {
   WarningOutlined,
   CalendarOutlined,
   FilterOutlined,
+  SaveOutlined,
+  FileTextOutlined,
+  ShareAltOutlined,
 } from "@ant-design/icons";
 import {
   BarChart,
@@ -131,6 +138,11 @@ const ReportsPage = () => {
   // Filter options
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
+
+  // Custom reports
+  const [savedReports, setSavedReports] = useState([]);
+  const [saveReportModalVisible, setSaveReportModalVisible] = useState(false);
+  const [reportName, setReportName] = useState("");
 
   // Chart colors
   const COLORS = [
@@ -457,6 +469,91 @@ const ReportsPage = () => {
     }
   };
 
+  // Save custom report
+  const handleSaveReport = async () => {
+    if (!reportName.trim()) {
+      message.error("Vui lòng nhập tên báo cáo");
+      return;
+    }
+
+    try {
+      const { collection, addDoc, Timestamp } = await import("firebase/firestore");
+      const { db } = await import("../firebase");
+      const reportsRef = collection(db, "CUSTOM_REPORTS");
+      
+      await addDoc(reportsRef, {
+        name: reportName.trim(),
+        dateRange: {
+          start: dateRange[0].toISOString(),
+          end: dateRange[1].toISOString(),
+        },
+        periodType,
+        filters,
+        createdAt: Timestamp.now(),
+        createdBy: "admin", // TODO: Get current user
+      });
+
+      message.success("Đã lưu báo cáo tùy chỉnh thành công!");
+      setSaveReportModalVisible(false);
+      setReportName("");
+      loadSavedReports();
+    } catch (error) {
+      console.error("Error saving report:", error);
+      message.error(`Lỗi khi lưu báo cáo: ${error.message}`);
+    }
+  };
+
+  // Load saved reports
+  const loadSavedReports = async () => {
+    try {
+      const { collection, getDocs, query, orderBy, limit } = await import("firebase/firestore");
+      const { db } = await import("../firebase");
+      const reportsRef = collection(db, "CUSTOM_REPORTS");
+      const q = query(reportsRef, orderBy("createdAt", "desc"), limit(50));
+      const snapshot = await getDocs(q);
+
+      const reports = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        reports.push({
+          id: docSnap.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || null,
+        });
+      });
+      setSavedReports(reports);
+    } catch (error) {
+      console.error("Error loading saved reports:", error);
+    }
+  };
+
+  // Load saved report
+  const handleLoadSavedReport = (report) => {
+    setDateRange([dayjs(report.dateRange.start), dayjs(report.dateRange.end)]);
+    setPeriodType(report.periodType || "custom");
+    setFilters(report.filters || { type: null, userID: null, categoryID: null });
+    message.success(`Đã tải báo cáo "${report.name}"`);
+  };
+
+  // Delete saved report
+  const handleDeleteSavedReport = async (reportId) => {
+    try {
+      const { doc, deleteDoc } = await import("firebase/firestore");
+      const { db } = await import("../firebase");
+      const reportRef = doc(db, "CUSTOM_REPORTS", reportId);
+      await deleteDoc(reportRef);
+      message.success("Đã xóa báo cáo thành công!");
+      loadSavedReports();
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      message.error(`Lỗi khi xóa báo cáo: ${error.message}`);
+    }
+  };
+
+  useEffect(() => {
+    loadSavedReports();
+  }, []);
+
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({
       ...prev,
@@ -520,6 +617,12 @@ const ReportsPage = () => {
         }
         extra={
           <Space>
+            <Button
+              icon={<FileTextOutlined />}
+              onClick={() => setSaveReportModalVisible(true)}
+            >
+              Lưu báo cáo
+            </Button>
             <Button
               icon={<ReloadOutlined />}
               onClick={loadReportData}
@@ -1257,6 +1360,7 @@ const ReportsPage = () => {
                     rowKey="id"
                     pagination={false}
                     size="small"
+                    scroll={{ x: 'max-content', y: 300 }}
                     columns={[
                       {
                         title: "STT",
@@ -1311,6 +1415,7 @@ const ReportsPage = () => {
                     rowKey="id"
                     pagination={false}
                     size="small"
+                    scroll={{ x: 'max-content', y: 300 }}
                     columns={[
                       {
                         title: "STT",
@@ -1358,6 +1463,29 @@ const ReportsPage = () => {
           </Row>
         )}
       </Spin>
+
+      {/* Save Report Modal */}
+      <Modal
+        title="Lưu Báo cáo Tùy chỉnh"
+        open={saveReportModalVisible}
+        onOk={handleSaveReport}
+        onCancel={() => {
+          setSaveReportModalVisible(false);
+          setReportName("");
+        }}
+        okText="Lưu"
+        cancelText="Hủy"
+      >
+        <Input
+          placeholder="Nhập tên báo cáo"
+          value={reportName}
+          onChange={(e) => setReportName(e.target.value)}
+          onPressEnter={handleSaveReport}
+        />
+        <div style={{ marginTop: 16, fontSize: 12, color: "#999" }}>
+          Báo cáo này sẽ lưu các bộ lọc và khoảng thời gian hiện tại.
+        </div>
+      </Modal>
     </div>
   );
 };

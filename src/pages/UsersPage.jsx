@@ -39,9 +39,12 @@ import {
   PlusOutlined,
   CheckCircleOutlined,
   InfoCircleOutlined,
+  HistoryOutlined,
+  KeyOutlined,
 } from "@ant-design/icons";
 import userService from "../services/userService";
 import notificationService from "../services/notificationService";
+import activityLogService from "../services/activityLogService";
 import { isFirebaseReady, auth } from "../firebase";
 import dayjs from "dayjs";
 import "../assets/css/pages/UsersPage.css";
@@ -79,6 +82,18 @@ function UsersPage() {
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Access history
+  const [accessHistoryModalVisible, setAccessHistoryModalVisible] = useState(false);
+  const [selectedUserForHistory, setSelectedUserForHistory] = useState(null);
+  const [accessHistory, setAccessHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Password change modal
+  const [passwordChangeModalVisible, setPasswordChangeModalVisible] = useState(false);
+  const [selectedUserForPasswordChange, setSelectedUserForPasswordChange] = useState(null);
+  const [passwordChangeForm] = Form.useForm();
+  const [changingPassword, setChangingPassword] = useState(false);
 
   // Load current user info
   useEffect(() => {
@@ -247,6 +262,24 @@ function UsersPage() {
 
   // Handle Lock/Unlock
   const handleLockUnlock = async (record) => {
+    if (!currentUser) {
+      message.error("Không thể xác định người dùng hiện tại");
+      return;
+    }
+
+    // Prevent locking Super Admin
+    if (record.isSuperAdmin === true) {
+      message.error("Không thể khóa tài khoản Super Admin");
+      return;
+    }
+
+    // Check if user has permission (Admin or Super Admin)
+    const hasPermission = isSuperAdmin || currentUser.role === "ADMIN";
+    if (!hasPermission) {
+      message.error("Bạn không có quyền khóa/mở khóa tài khoản");
+      return;
+    }
+
     setActionLoading(record.id);
 
     try {
@@ -272,6 +305,13 @@ function UsersPage() {
   const handleApproveUser = async (record) => {
     if (!currentUser) {
       message.error("Không thể xác định người dùng hiện tại");
+      return;
+    }
+
+    // Check if user has permission (Admin or Super Admin)
+    const hasPermission = isSuperAdmin || currentUser.role === "ADMIN";
+    if (!hasPermission) {
+      message.error("Bạn không có quyền phê duyệt tài khoản");
       return;
     }
 
@@ -331,12 +371,51 @@ function UsersPage() {
     }
 
     const { record, newRole } = pendingRoleChange;
+    
+    // Prevent demoting Super Admin
+    if (record.isSuperAdmin === true && newRole === "USER") {
+      message.error("Không thể hạ cấp Super Admin");
+      setRoleChangeModalVisible(false);
+      setPendingRoleChange(null);
+      return;
+    }
+
+    // Only Super Admin can demote admins
+    if (newRole === "USER" && record.role === "ADMIN" && !isSuperAdmin) {
+      message.error("Chỉ Super Admin mới có quyền hạ cấp Admin");
+      setRoleChangeModalVisible(false);
+      setPendingRoleChange(null);
+      return;
+    }
+
     setActionLoading(record.id);
     setRoleChangeModalVisible(false);
 
     try {
-      // Change role
-      await userService.changeUserRole(record.id, newRole, currentUser.id);
+      // Change role - only Super Admin can demote, but Admin can promote
+      if (newRole === "USER" && record.role === "ADMIN") {
+        // Demoting admin - only Super Admin can do this
+        if (!isSuperAdmin) {
+          message.error("Chỉ Super Admin mới có quyền hạ cấp Admin");
+          return;
+        }
+        await userService.changeUserRole(record.id, newRole, currentUser.id);
+      } else if (newRole === "ADMIN" && record.role === "USER") {
+        // Promoting to admin - Admin and Super Admin can do this
+        // Use direct Firestore update to allow Admin to promote
+        const { doc, updateDoc, Timestamp } = await import("firebase/firestore");
+        const { db } = await import("../firebase");
+        const { COLLECTIONS } = await import("../constants/collections");
+        const userRef = doc(db, COLLECTIONS.USERS, record.id);
+        await updateDoc(userRef, {
+          role: "ADMIN",
+          isSuperAdmin: false, // Regular admin, not super admin
+          updatedAt: Timestamp.now(),
+        });
+      } else {
+        // Use service for other cases
+        await userService.changeUserRole(record.id, newRole, currentUser.id);
+      }
 
       // Create notification for the user
       try {
@@ -517,6 +596,57 @@ function UsersPage() {
     }
   };
 
+  // Load user access history
+  const loadUserAccessHistory = async (userId) => {
+    try {
+      setLoadingHistory(true);
+      const history = await activityLogService.getUserAccessHistory(userId, 50);
+      setAccessHistory(history);
+    } catch (error) {
+      console.error("Error loading access history:", error);
+      message.error(`Lỗi khi tải lịch sử đăng nhập: ${error.message}`);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Handle password change
+  const handlePasswordChange = async (values) => {
+    if (!selectedUserForPasswordChange || !currentUser) {
+      message.error("Không thể xác định người dùng");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await userService.changeUserPassword(
+        selectedUserForPasswordChange.id,
+        values.newPassword
+      );
+
+      message.success(
+        `Đã thay đổi mật khẩu cho ${selectedUserForPasswordChange.name} thành công! Thông báo đã được gửi đến email của người dùng.`
+      );
+
+      // Reset form and close modal
+      passwordChangeForm.resetFields();
+      setPasswordChangeModalVisible(false);
+      setSelectedUserForPasswordChange(null);
+    } catch (err) {
+      console.error("Change password error:", err);
+      message.error(`Lỗi: ${err.message}`);
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  // Open password change modal
+  const handlePasswordChangeClick = (record) => {
+    setSelectedUserForPasswordChange(record);
+    setPasswordChangeModalVisible(true);
+    passwordChangeForm.resetFields();
+  };
+
   // Table columns
   const columns = [
     {
@@ -627,33 +757,67 @@ function UsersPage() {
       ),
     },
     {
+      title: "Lịch sử đăng nhập",
+      key: "accessHistory",
+      width: 120,
+      render: (_, record) => (
+        <Button
+          size="small"
+          icon={<HistoryOutlined />}
+          onClick={() => {
+            setSelectedUserForHistory(record);
+            setAccessHistoryModalVisible(true);
+            loadUserAccessHistory(record.id);
+          }}
+        >
+          Xem
+        </Button>
+      ),
+    },
+    {
       title: "Hành động",
       key: "action",
       width: 250,
       fixed: "right",
       render: (_, record) => {
         const isCurrentUser = currentUser && currentUser.id === record.id;
-        const canApprove = isSuperAdmin && record.accountStatus === "PENDING";
+        const isAdmin = currentUser && currentUser.role === "ADMIN";
+        const isTargetSuperAdmin = record.isSuperAdmin === true;
+        
+        // Admin and Super Admin can approve pending users
+        const canApprove = (isSuperAdmin || isAdmin) && record.accountStatus === "PENDING";
+        
+        // Admin and Super Admin can promote users to admin, but cannot promote Super Admin
         const canChangeRole =
-          isSuperAdmin &&
+          (isSuperAdmin || isAdmin) &&
           !isCurrentUser &&
-          !record.isSuperAdmin &&
+          !isTargetSuperAdmin &&
           record.role !== "ADMIN" &&
-          record.accountStatus !== "PENDING"; // Only super admin can promote users to admin (not pending users)
+          record.accountStatus !== "PENDING";
+        
+        // Only Super Admin can demote other admins, and cannot demote Super Admin
         const canDemoteAdmin =
           isSuperAdmin &&
           !isCurrentUser &&
-          !record.isSuperAdmin &&
-          record.role === "ADMIN"; // Only super admin can demote other admins
+          !isTargetSuperAdmin &&
+          record.role === "ADMIN";
+        
+        // Admin and Super Admin can lock/unlock users, but cannot lock Super Admin
         const canLockUnlock =
-          isSuperAdmin &&
+          (isSuperAdmin || isAdmin) &&
           record.accountStatus !== "PENDING" &&
-          !record.isSuperAdmin &&
+          !isTargetSuperAdmin &&
           !isCurrentUser;
+
+        // Admin and Super Admin can change passwords, but cannot change Super Admin password (unless you are Super Admin yourself)
+        const canChangePassword =
+          (isSuperAdmin || isAdmin) &&
+          !isCurrentUser &&
+          !(isTargetSuperAdmin && !isSuperAdmin);
 
         return (
           <Space>
-            {/* Approve Pending User - Only Super Admin can do this */}
+            {/* Approve Pending User - Admin and Super Admin can do this */}
             {canApprove && (
               <Popconfirm
                 title="Phê duyệt tài khoản"
@@ -710,7 +874,7 @@ function UsersPage() {
               </Popconfirm>
             )}
 
-            {/* Promote to Admin - Only Super Admin can do this */}
+            {/* Promote to Admin - Admin and Super Admin can do this */}
             {canChangeRole && (
               <Tooltip title="Cấp quyền Admin">
                 <Button
@@ -737,6 +901,21 @@ function UsersPage() {
                   onClick={() => handleRoleChangeClick(record, "USER")}
                 >
                   Hạ cấp
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Change Password - Admin and Super Admin can do this */}
+            {canChangePassword && (
+              <Tooltip title="Đổi mật khẩu">
+                <Button
+                  type="default"
+                  icon={<KeyOutlined />}
+                  loading={actionLoading === record.id}
+                  size="small"
+                  onClick={() => handlePasswordChangeClick(record)}
+                >
+                  Đổi mật khẩu
                 </Button>
               </Tooltip>
             )}
@@ -828,7 +1007,22 @@ function UsersPage() {
               style={{
                 border: "2px solid #ff9800",
                 backgroundColor: "#fff7e6",
+                cursor: isSuperAdmin ? "pointer" : "default",
               }}
+              onClick={() => {
+                if (isSuperAdmin) {
+                  // Filter to show only PENDING users
+                  setStatusFilter("PENDING");
+                  // Scroll to table
+                  setTimeout(() => {
+                    const tableElement = document.querySelector(".users-table");
+                    if (tableElement) {
+                      tableElement.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                  }, 100);
+                }
+              }}
+              hoverable={isSuperAdmin}
             >
               <Statistic
                 title="Chờ phê duyệt"
@@ -838,7 +1032,7 @@ function UsersPage() {
               />
               {isSuperAdmin && (
                 <div style={{ marginTop: 8, fontSize: 12, color: "#ff9800" }}>
-                  Click vào bảng để phê duyệt
+                  Click để xem danh sách chờ phê duyệt
                 </div>
               )}
             </Card>
@@ -857,7 +1051,7 @@ function UsersPage() {
         className="users-table-card"
         extra={
           <Space>
-            {isSuperAdmin && (
+            {(isSuperAdmin || (currentUser && currentUser.role === "ADMIN")) && (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -950,12 +1144,14 @@ function UsersPage() {
               dataSource={filteredUsers}
               rowKey="id"
               pagination={{
+                responsive: true,
                 pageSize: 10,
                 showSizeChanger: true,
                 showTotal: (total) => `Tổng ${total} người dùng`,
                 pageSizeOptions: ["5", "10", "20", "50"],
               }}
-              scroll={{ x: 1200 }}
+              scroll={{ x: 'max-content', y: 400 }}
+              size="small"
               bordered
               className="users-table"
               rowClassName={(record) =>
@@ -1263,6 +1459,173 @@ function UsersPage() {
           />
         )}
       </Drawer>
+
+      {/* Access History Modal */}
+      <Modal
+        title={`Lịch sử Đăng nhập - ${selectedUserForHistory?.name || selectedUserForHistory?.email || "N/A"}`}
+        open={accessHistoryModalVisible}
+        onCancel={() => {
+          setAccessHistoryModalVisible(false);
+          setSelectedUserForHistory(null);
+          setAccessHistory([]);
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setAccessHistoryModalVisible(false);
+            setSelectedUserForHistory(null);
+            setAccessHistory([]);
+          }}>
+            Đóng
+          </Button>,
+        ]}
+        width={800}
+      >
+        <Spin spinning={loadingHistory}>
+          <Table
+            dataSource={accessHistory}
+            rowKey="id"
+            columns={[
+              {
+                title: "Thời gian",
+                dataIndex: "timestamp",
+                key: "timestamp",
+                render: (timestamp) =>
+                  timestamp ? dayjs(timestamp).format("DD/MM/YYYY HH:mm:ss") : "N/A",
+              },
+              {
+                title: "IP Address",
+                dataIndex: "ipAddress",
+                key: "ipAddress",
+                render: (ip) => ip || "N/A",
+              },
+              {
+                title: "Thiết bị",
+                dataIndex: "userAgent",
+                key: "userAgent",
+                render: (ua) => ua ? (ua.length > 50 ? `${ua.substring(0, 50)}...` : ua) : "N/A",
+              },
+            ]}
+            pagination={{ responsive: true, pageSize: 10 }}
+            scroll={{ x: 'max-content', y: 400 }}
+            size="small"
+          />
+        </Spin>
+      </Modal>
+
+      {/* Password Change Modal */}
+      <Modal
+        title={
+          <Space>
+            <KeyOutlined style={{ color: "#1890ff" }} />
+            <span>Đổi mật khẩu người dùng</span>
+          </Space>
+        }
+        open={passwordChangeModalVisible}
+        onCancel={() => {
+          passwordChangeForm.resetFields();
+          setPasswordChangeModalVisible(false);
+          setSelectedUserForPasswordChange(null);
+        }}
+        footer={null}
+        width={500}
+      >
+        {selectedUserForPasswordChange && (
+          <div>
+            <Alert
+              message="Thông tin người dùng"
+              description={
+                <Space direction="vertical" size="small" style={{ width: "100%" }}>
+                  <div>
+                    <Text strong>Người dùng:</Text> {selectedUserForPasswordChange.name}
+                  </div>
+                  <div>
+                    <Text strong>Email:</Text> {selectedUserForPasswordChange.email}
+                  </div>
+                </Space>
+              }
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+
+            <Form
+              form={passwordChangeForm}
+              layout="vertical"
+              onFinish={handlePasswordChange}
+            >
+              <Form.Item
+                label="Mật khẩu mới"
+                name="newPassword"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mật khẩu mới" },
+                  { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
+                ]}
+              >
+                <Input.Password
+                  placeholder="Nhập mật khẩu mới"
+                  prefix={<LockOutlined />}
+                  size="large"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Xác nhận mật khẩu mới"
+                name="confirmPassword"
+                dependencies={["newPassword"]}
+                rules={[
+                  { required: true, message: "Vui lòng xác nhận mật khẩu mới" },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue("newPassword") === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        new Error("Mật khẩu xác nhận không khớp!")
+                      );
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password
+                  placeholder="Nhập lại mật khẩu mới"
+                  prefix={<LockOutlined />}
+                  size="large"
+                />
+              </Form.Item>
+
+              <Alert
+                message="Lưu ý"
+                description="Mật khẩu mới sẽ được áp dụng ngay lập tức. Người dùng sẽ nhận được thông báo qua email về việc thay đổi mật khẩu."
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+
+              <Form.Item>
+                <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+                  <Button
+                    onClick={() => {
+                      passwordChangeForm.resetFields();
+                      setPasswordChangeModalVisible(false);
+                      setSelectedUserForPasswordChange(null);
+                    }}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={changingPassword}
+                    icon={<CheckCircleOutlined />}
+                  >
+                    Đổi mật khẩu
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

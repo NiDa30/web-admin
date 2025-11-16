@@ -19,6 +19,7 @@ import {
   InputNumber,
   Switch,
   Divider,
+  Select,
 } from "antd";
 import {
   PlusOutlined,
@@ -35,6 +36,11 @@ import {
   LockOutlined,
   UnlockOutlined,
   DragOutlined,
+  ExportOutlined,
+  ImportOutlined,
+  BarChartOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined,
 } from "@ant-design/icons";
 import { isFirebaseReady } from "../firebase";
 import {
@@ -56,6 +62,8 @@ import {
 } from "../constants/defaultCategories";
 import "../assets/css/pages/CategoriesPage.css";
 
+const { Option } = Select;
+
 const CategoriesPage = () => {
   // State management
   const [expenseCategories, setExpenseCategories] = useState([]);
@@ -71,6 +79,8 @@ const CategoriesPage = () => {
   const [isEditingDefault, setIsEditingDefault] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'table'
+  const [sortBy, setSortBy] = useState("displayOrder"); // 'displayOrder', 'name', 'count', 'createdAt'
+  const [sortOrder, setSortOrder] = useState("asc"); // 'asc' or 'desc'
 
   // Form state
   const [formData, setFormData] = useState({
@@ -263,23 +273,159 @@ const CategoriesPage = () => {
     return categories;
   };
 
-  // Filter categories based on search
+  // Filter and sort categories
   const getFilteredCategories = () => {
-    const categories = getCategoriesToDisplay();
-    if (!searchText.trim()) return categories;
+    let categories = getCategoriesToDisplay();
+    
+    // Apply search filter
+    if (searchText.trim()) {
+      const lowerSearch = searchText.toLowerCase();
+      categories = categories.filter(
+        (cat) =>
+          cat.name?.toLowerCase().includes(lowerSearch) ||
+          cat.id?.toLowerCase().includes(lowerSearch) ||
+          (cat.keywords &&
+            Array.isArray(cat.keywords) &&
+            cat.keywords.some((k) => k.toLowerCase().includes(lowerSearch)))
+      );
+    }
 
-    const lowerSearch = searchText.toLowerCase();
-    return categories.filter(
-      (cat) =>
-        cat.name?.toLowerCase().includes(lowerSearch) ||
-        cat.id?.toLowerCase().includes(lowerSearch) ||
-        (cat.keywords &&
-          Array.isArray(cat.keywords) &&
-          cat.keywords.some((k) => k.toLowerCase().includes(lowerSearch)))
-    );
+    // Apply sorting
+    categories.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortBy) {
+        case "name":
+          aValue = a.name?.toLowerCase() || "";
+          bValue = b.name?.toLowerCase() || "";
+          break;
+        case "count":
+          aValue = a.count || 0;
+          bValue = b.count || 0;
+          break;
+        case "createdAt":
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          break;
+        case "displayOrder":
+        default:
+          aValue = a.displayOrder ?? a.order ?? 999;
+          bValue = b.displayOrder ?? b.order ?? 999;
+          break;
+      }
+
+      if (sortOrder === "asc") {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+      } else {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+      }
+    });
+
+    return categories;
   };
 
   const filteredCategories = getFilteredCategories();
+
+  // Handle Export Categories
+  const handleExportCategories = () => {
+    const csvContent = [
+      ["ID", "Tên", "Icon", "Màu", "Loại", "Thứ tự", "Số giao dịch", "Từ khóa"].join(","),
+      ...filteredCategories.map((cat) =>
+        [
+          cat.id || "",
+          cat.name || "",
+          cat.icon || "",
+          cat.color || "",
+          cat.type || "",
+          cat.displayOrder ?? cat.order ?? 0,
+          cat.count || 0,
+          Array.isArray(cat.keywords) ? cat.keywords.join(";") : "",
+        ].join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `categories_${activeTab}_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    message.success("Đã xuất file CSV thành công!");
+  };
+
+  // Handle Import Categories
+  const handleImportCategories = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv";
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const lines = text.split("\n");
+        const headers = lines[0].split(",");
+        const categories = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(",");
+          const category = {
+            name: values[1] || "",
+            icon: values[2] || ICON_OPTIONS[activeTab][0],
+            color: values[3] || COLOR_OPTIONS[0],
+            type: values[4] || activeTab,
+            displayOrder: parseInt(values[5]) || 0,
+            count: parseInt(values[6]) || 0,
+            keywords: values[7] ? values[7].split(";").filter((k) => k.trim()) : [],
+            isSystemDefault: false,
+          };
+          categories.push(category);
+        }
+
+        // Import categories
+        setLoading(true);
+        for (const category of categories) {
+          try {
+            await addCategory(category);
+          } catch (err) {
+            console.warn(`Failed to import category ${category.name}:`, err);
+          }
+        }
+        message.success(`Đã nhập ${categories.length} danh mục thành công!`);
+        await loadCategories();
+      } catch (error) {
+        console.error("Import error:", error);
+        message.error(`Lỗi khi nhập file: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    input.click();
+  };
+
+  // Calculate category statistics
+  const getCategoryStats = () => {
+    const stats = {
+      total: filteredCategories.length,
+      totalTransactions: filteredCategories.reduce((sum, cat) => sum + (cat.count || 0), 0),
+      avgTransactions: 0,
+      topCategory: null,
+    };
+
+    if (stats.total > 0) {
+      stats.avgTransactions = Math.round(stats.totalTransactions / stats.total);
+      stats.topCategory = [...filteredCategories].sort((a, b) => (b.count || 0) - (a.count || 0))[0];
+    }
+
+    return stats;
+  };
+
+  const categoryStats = getCategoryStats();
 
   // Check if category is default
   const isDefaultCategory = (category) => {
@@ -667,6 +813,18 @@ const CategoriesPage = () => {
               <Button icon={<LockOutlined />}>Tải danh mục mặc định</Button>
             </Popconfirm>
             <Button
+              icon={<ExportOutlined />}
+              onClick={handleExportCategories}
+            >
+              Xuất CSV
+            </Button>
+            <Button
+              icon={<ImportOutlined />}
+              onClick={handleImportCategories}
+            >
+              Nhập CSV
+            </Button>
+            <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => handleOpenModal()}
@@ -677,6 +835,64 @@ const CategoriesPage = () => {
         }
         style={{ marginBottom: 24 }}
       >
+        {/* Statistics */}
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small">
+              <div style={{ fontSize: 24, fontWeight: "bold", color: "#1890ff" }}>
+                {categoryStats.total}
+              </div>
+              <div style={{ color: "#999" }}>Tổng danh mục</div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small">
+              <div style={{ fontSize: 24, fontWeight: "bold", color: "#52c41a" }}>
+                {categoryStats.totalTransactions}
+              </div>
+              <div style={{ color: "#999" }}>Tổng giao dịch</div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small">
+              <div style={{ fontSize: 24, fontWeight: "bold", color: "#faad14" }}>
+                {categoryStats.avgTransactions}
+              </div>
+              <div style={{ color: "#999" }}>Trung bình/danh mục</div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small">
+              <div style={{ fontSize: 20, fontWeight: "bold" }}>
+                {categoryStats.topCategory?.icon} {categoryStats.topCategory?.name || "N/A"}
+              </div>
+              <div style={{ color: "#999" }}>
+                Top danh mục ({categoryStats.topCategory?.count || 0} giao dịch)
+              </div>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Sort Controls */}
+        <Space wrap style={{ marginBottom: 16 }}>
+          <span>Sắp xếp theo:</span>
+          <Select
+            value={sortBy}
+            onChange={setSortBy}
+            style={{ width: 150 }}
+          >
+            <Option value="displayOrder">Thứ tự hiển thị</Option>
+            <Option value="name">Tên</Option>
+            <Option value="count">Số giao dịch</Option>
+            <Option value="createdAt">Ngày tạo</Option>
+          </Select>
+          <Button
+            icon={sortOrder === "asc" ? <SortAscendingOutlined /> : <SortDescendingOutlined />}
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+          >
+            {sortOrder === "asc" ? "Tăng dần" : "Giảm dần"}
+          </Button>
+        </Space>
         <Space wrap>
           <Space>
             <span>Hiển thị:</span>
@@ -805,10 +1021,13 @@ const CategoriesPage = () => {
             dataSource={filteredCategories}
             rowKey="id"
             pagination={{
+              responsive: true,
               pageSize: 10,
               showSizeChanger: true,
               showTotal: (total) => `Tổng ${total} danh mục`,
             }}
+            scroll={{ x: 'max-content', y: 400 }}
+            size="small"
             loading={loading}
           />
         </Card>

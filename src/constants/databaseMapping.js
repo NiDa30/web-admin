@@ -20,15 +20,16 @@ export const COLLECTION_TO_TABLE_MAP = {
 
   // System
   SYNC_LOG: "SYNC_LOG",
+  ACTIVITY_LOG: "ACTIVITY_LOG", // Added
   NOTIFICATION: "NOTIFICATION",
   DEVICE: "DEVICE",
 
   // Media & Attachments
   ATTACHMENT: "ATTACHMENT",
 
-  // Payment & Merchants
-  PAYMENT_METHHOD: "PAYMENT_METHOD", // Note: Firestore has typo, SQLite uses correct spelling
-  MERCHART: "MERCHANT", // Note: Firestore has typo, SQLite uses correct spelling
+  // Payment & Merchants (Note: Firestore has typos)
+  PAYMENT_METHHOD: "PAYMENT_METHOD", // Note: Firestore typo - PAYMENT_METHHOD, SQLite uses correct spelling
+  MERCHART: "MERCHANT", // Note: Firestore typo - MERCHART, SQLite uses correct spelling
 
   // Tags & Organization
   TAG: "TAG",
@@ -66,6 +67,7 @@ export const FIELD_NAME_MAP = {
     BUDGET_HISTORY: "historyID",
     GOAL_CONTRIBUTION: "contributionID",
     SYNC_LOG: "logID",
+    ACTIVITY_LOG: "logID", // Added
     NOTIFICATION: "notificationID",
     DEVICE: "deviceID",
     ATTACHMENT: "attachmentID",

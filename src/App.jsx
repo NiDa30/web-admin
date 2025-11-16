@@ -10,7 +10,10 @@ import CategoriesPage from "./pages/CategoriesPage";
 import ReportsPage from "./pages/ReportsPage";
 import ConfigPage from "./pages/ConfigPage";
 import DatabaseManagementPage from "./pages/DatabaseManagementPage";
+import ActivityLogsPage from "./pages/ActivityLogsPage";
+import SyncLogsPage from "./pages/SyncLogsPage";
 import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
@@ -60,22 +63,60 @@ function App() {
                 );
                 
                 // Update to set isSuperAdmin flag and ensure ACTIVE status
-                const { doc, updateDoc, Timestamp } = await import("firebase/firestore");
-                const { db } = await import("./firebase");
-                const { COLLECTIONS } = await import("./constants/collections");
-                const userRef = doc(db, COLLECTIONS.USERS, newUserId);
-                await updateDoc(userRef, {
-                  isSuperAdmin: true,
-                  accountStatus: "ACTIVE",
-                  role: "ADMIN",
-                  updatedAt: Timestamp.now(),
-                });
-                
-                // Reload user data
-                userData = await userService.getUserByEmail(currentUser.email);
-                console.log("✅ App.jsx - Super Admin created successfully");
+                if (newUserId) {
+                  try {
+                    const { doc, updateDoc, Timestamp } = await import("firebase/firestore");
+                    const { db } = await import("./firebase");
+                    const { COLLECTIONS } = await import("./constants/collections");
+                    const userRef = doc(db, COLLECTIONS.USERS, newUserId);
+                    
+                    // Add timeout wrapper for update
+                    const timeoutPromise = new Promise((_, reject) => {
+                      setTimeout(() => reject(new Error("Update timeout")), 10000);
+                    });
+                    
+                    await Promise.race([
+                      updateDoc(userRef, {
+                        isSuperAdmin: true,
+                        accountStatus: "ACTIVE",
+                        role: "ADMIN",
+                        updatedAt: Timestamp.now(),
+                      }),
+                      timeoutPromise
+                    ]);
+                    
+                    // Reload user data with retry
+                    userData = await userService.getUserByEmail(currentUser.email);
+                    console.log("✅ App.jsx - Super Admin created successfully");
+                  } catch (updateError) {
+                    console.warn("⚠️ App.jsx - Error updating Super Admin, but user created:", updateError);
+                    // User was created, so we can still proceed
+                    userData = {
+                      id: newUserId,
+                      email: currentUser.email,
+                      name: currentUser.email.split("@")[0],
+                      role: "ADMIN",
+                      accountStatus: "ACTIVE",
+                      isSuperAdmin: true,
+                    };
+                  }
+                }
               } catch (createError) {
                 console.error("❌ App.jsx - Error creating Super Admin:", createError);
+                // If creation fails due to timeout, allow login anyway for Super Admin
+                if (createError.message?.includes("timeout") || 
+                    createError.message?.includes("Could not reach") ||
+                    createError.code === "unavailable") {
+                  console.warn("⚠️ App.jsx - Network timeout, allowing Super Admin login anyway");
+                  userData = {
+                    id: null,
+                    email: currentUser.email,
+                    name: currentUser.email.split("@")[0],
+                    role: "ADMIN",
+                    accountStatus: "ACTIVE",
+                    isSuperAdmin: true,
+                  };
+                }
               }
             }
             
@@ -148,8 +189,25 @@ function App() {
             }
           } catch (error) {
             console.error("❌ App.jsx - Error checking user status:", error);
-            // On error, still set user if Super Admin or localStorage says authenticated
-            if (isSuperAdminEmail || localStorage.getItem("isAuth") === "true") {
+            
+            // Check if it's a network/timeout error
+            const isNetworkError = error.message?.includes("timeout") || 
+                                  error.message?.includes("Could not reach") ||
+                                  error.message?.includes("Failed to fetch") ||
+                                  error.code === "unavailable" ||
+                                  error.code === "deadline-exceeded";
+            
+            // On network error, allow Super Admin or previously authenticated users to continue
+            if (isNetworkError && (isSuperAdminEmail || localStorage.getItem("isAuth") === "true")) {
+              console.warn("⚠️ App.jsx - Network error, but allowing authenticated user to continue");
+              setUser(currentUser);
+              setLoginEmail(currentUser.email || "");
+              setAdminName(
+                currentUser.displayName || currentUser.email?.split("@")[0] || "Admin"
+              );
+              localStorage.setItem("isAuth", "true");
+            } else if (isSuperAdminEmail || localStorage.getItem("isAuth") === "true") {
+              // For other errors, still allow Super Admin or authenticated users
               setUser(currentUser);
               setLoginEmail(currentUser.email || "");
               setAdminName(
@@ -222,6 +280,17 @@ function App() {
           )
         }
       />
+      
+      <Route
+        path="/forgot-password"
+        element={
+          user ? (
+            <Navigate to="/admin/dashboard" replace />
+          ) : (
+            <ForgotPasswordPage />
+          )
+        }
+      />
 
       <Route
         path="/admin"
@@ -242,6 +311,8 @@ function App() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="config" element={<ConfigPage />} />
         <Route path="database" element={<DatabaseManagementPage />} />
+        <Route path="activity-logs" element={<ActivityLogsPage />} />
+        <Route path="sync-logs" element={<SyncLogsPage />} />
       </Route>
 
       <Route

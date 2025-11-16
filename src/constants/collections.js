@@ -23,15 +23,16 @@ export const COLLECTIONS = {
 
   // System
   SYNC_LOGS: "SYNC_LOG",
+  ACTIVITY_LOG: "ACTIVITY_LOG",
   NOTIFICATIONS: "NOTIFICATION",
   DEVICES: "DEVICE",
 
   // Media & Attachments
   ATTACHMENTS: "ATTACHMENT",
 
-  // Payment & Merchants
-  PAYMENT_METHODS: "PAYMENT_METHHOD", // Note: Firebase has typo
-  MERCHANTS: "MERCHART", // Note: Firebase has typo
+  // Payment & Merchants (Note: Firebase has typos)
+  PAYMENT_METHODS: "PAYMENT_METHHOD", // Note: Firebase typo - PAYMENT_METHHOD
+  MERCHANTS: "MERCHART", // Note: Firebase typo - MERCHART
 
   // Tags & Organization
   TAGS: "TAG",

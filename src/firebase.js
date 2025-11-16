@@ -27,7 +27,14 @@ let googleProvider;
 try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
+
+  // Initialize Firestore with better error handling
   db = getFirestore(app);
+
+  // Set Firestore settings to handle timeouts better
+  // Note: Firestore v9+ doesn't have direct timeout settings,
+  // but we can handle errors gracefully
+
   storage = getStorage(app);
 
   googleProvider = new GoogleAuthProvider();
@@ -38,10 +45,11 @@ try {
   console.log("✅ Firebase initialized successfully");
 } catch (error) {
   console.error("❌ Firebase initialization failed:", error);
+  // Don't throw - allow app to continue in offline mode
 }
 
 // Export services
-export { auth, db, storage, googleProvider };
+export { auth, db, storage, googleProvider, app };
 
 // Export collections for convenience
 export { COLLECTIONS };

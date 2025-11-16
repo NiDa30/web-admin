@@ -263,6 +263,86 @@ class NotificationService {
       return 0;
     }
   }
+
+  /**
+   * Create password change notification and send email
+   */
+  async createPasswordChangeNotification(userId, userEmail, userName, isNewPassword = false) {
+    try {
+      const title = isNewPassword
+        ? "Mật khẩu đã được tạo thành công"
+        : "Mật khẩu đã được thay đổi";
+      
+      const message = isNewPassword
+        ? `Mật khẩu cho tài khoản ${userEmail} đã được tạo thành công. Bây giờ bạn có thể đăng nhập bằng email và mật khẩu. Nếu bạn không thực hiện thao tác này, vui lòng liên hệ quản trị viên ngay lập tức.`
+        : `Mật khẩu cho tài khoản ${userEmail} đã được thay đổi thành công. Nếu bạn không thực hiện thao tác này, vui lòng liên hệ quản trị viên ngay lập tức và đổi lại mật khẩu.`;
+
+      // Create notification in Firestore
+      const notificationId = await this.createNotification({
+        userID: userId,
+        type: "SECURITY",
+        title,
+        message,
+        priority: "HIGH",
+        relatedEntityType: "USER",
+        relatedEntityID: userId,
+      });
+
+      // Send email notification via Firebase Functions or API
+      try {
+        await this.sendPasswordChangeEmail(userEmail, userName, isNewPassword);
+        console.log(`✅ Password change email sent to ${userEmail}`);
+      } catch (emailError) {
+        console.warn("⚠️ Failed to send password change email:", emailError);
+        // Don't fail the notification creation if email fails
+      }
+
+      console.log(`✅ Password change notification created: ${notificationId}`);
+      return notificationId;
+    } catch (error) {
+      console.error("❌ Error creating password change notification:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send password change email notification via Firebase Functions
+   */
+  async sendPasswordChangeEmail(userEmail, userName, isNewPassword = false) {
+    try {
+      // Firebase Functions URL
+      const projectId = "quanlygoiychitieu";
+      const functionsUrl = `https://us-central1-${projectId}.cloudfunctions.net`;
+      const sendEmailUrl = `${functionsUrl}/sendPasswordChangeEmail`;
+      
+      const response = await fetch(sendEmailUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          userName: userName,
+          isNewPassword: isNewPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Email API returned ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Email sent successfully:", result);
+      return result;
+    } catch (error) {
+      // If Firebase Functions is not available, log and continue
+      console.warn("⚠️ Email sending service not available:", error.message);
+      console.warn("⚠️ Make sure Firebase Functions are deployed and configured");
+      // Don't throw - notification is still created in Firestore
+      return null;
+    }
+  }
 }
 
 export default new NotificationService();

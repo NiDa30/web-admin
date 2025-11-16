@@ -113,3 +113,215 @@ h1, h2, h3, h4, h5 {
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(82, 196, 26, 0.4);
 }
+
+/* ====== Responsive Styles ====== */
+
+/* Table Responsive */
+.ant-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.ant-table {
+  min-width: 100%;
+}
+
+.ant-table-container {
+  overflow-x: auto;
+}
+
+/* Card Responsive */
+@media (max-width: 768px) {
+  .ant-card {
+    border-radius: 12px !important;
+  }
+
+  .ant-card-head {
+    padding: 10px 16px !important;
+  }
+
+  .ant-card-head-title {
+    font-size: 16px !important;
+  }
+
+  .ant-card-body {
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .ant-card {
+    border-radius: 8px !important;
+  }
+
+  .ant-card-head {
+    padding: 8px 12px !important;
+  }
+
+  .ant-card-head-title {
+    font-size: 14px !important;
+  }
+
+  .ant-card-body {
+    padding: 12px !important;
+  }
+}
+
+/* Button Responsive */
+@media (max-width: 768px) {
+  .ant-btn {
+    font-size: 13px !important;
+    padding: 4px 12px !important;
+  }
+
+  .ant-btn-lg {
+    font-size: 14px !important;
+    padding: 6px 16px !important;
+  }
+}
+
+/* Input Responsive */
+@media (max-width: 768px) {
+  .ant-input,
+  .ant-input-affix-wrapper {
+    font-size: 14px !important;
+  }
+}
+
+/* Table Responsive */
+@media (max-width: 768px) {
+  .ant-table {
+    font-size: 12px !important;
+  }
+
+  .ant-table-thead > tr > th {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .ant-table-tbody > tr > td {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .ant-table {
+    font-size: 11px !important;
+  }
+
+  .ant-table-thead > tr > th {
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+  }
+
+  .ant-table-tbody > tr > td {
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* Statistic Responsive */
+@media (max-width: 768px) {
+  .ant-statistic-title {
+    font-size: 12px !important;
+  }
+
+  .ant-statistic-content {
+    font-size: 20px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .ant-statistic-content {
+    font-size: 18px !important;
+  }
+}
+
+/* Tag Responsive */
+@media (max-width: 768px) {
+  .ant-tag {
+    font-size: 11px !important;
+    padding: 2px 8px !important;
+  }
+}
+
+/* Modal Responsive */
+@media (max-width: 768px) {
+  .ant-modal {
+    margin: 0 !important;
+    max-width: 100% !important;
+    top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .ant-modal-content {
+    border-radius: 0 !important;
+    height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .ant-modal-body {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 16px !important;
+  }
+}
+
+/* Space Responsive */
+@media (max-width: 768px) {
+  .ant-space {
+    gap: 8px !important;
+  }
+
+  .ant-space-item {
+    flex-shrink: 0;
+  }
+}
+
+/* Row/Col Responsive */
+@media (max-width: 768px) {
+  .ant-row {
+    margin-left: -8px !important;
+    margin-right: -8px !important;
+  }
+
+  .ant-col {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}
+
+/* Select Responsive */
+@media (max-width: 768px) {
+  .ant-select {
+    font-size: 14px !important;
+  }
+
+  .ant-select-selector {
+    padding: 2px 8px !important;
+  }
+}
+
+/* Prevent horizontal scroll */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Ensure tables scroll horizontally on mobile */
+@media (max-width: 768px) {
+  .ant-table-wrapper {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ant-table-body {
+    overflow-x: auto;
+  }
+}

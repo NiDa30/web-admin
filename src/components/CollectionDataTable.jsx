@@ -473,13 +473,14 @@ function CollectionDataTable({ collectionName, onRefresh }) {
     <div className="collection-data-table">
       <Card>
         <div className="table-header">
-          <Space>
+          <Space wrap size={[8, 8]} style={{ width: "100%" }}>
             <Search
               placeholder="Tìm kiếm..."
               allowClear
               enterButton={<SearchOutlined />}
               size="large"
-              style={{ width: 300 }}
+              className="responsive-input"
+              style={{ width: "100%", minWidth: 200, maxWidth: 400 }}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               onSearch={filterData}
@@ -488,8 +489,9 @@ function CollectionDataTable({ collectionName, onRefresh }) {
               icon={<ReloadOutlined />}
               onClick={loadData}
               loading={loading}
+              className="responsive-button"
             >
-              Làm mới
+              <span className="hidden-sm">Làm mới</span>
             </Button>
             {selectedRowKeys.length > 0 && (
               <>
@@ -500,8 +502,9 @@ function CollectionDataTable({ collectionName, onRefresh }) {
                   icon={<ClearOutlined />}
                   onClick={handleClearSelection}
                   size="large"
+                  className="responsive-button"
                 >
-                  Bỏ chọn
+                  <span className="hidden-sm">Bỏ chọn</span>
                 </Button>
                 <Popconfirm
                   title="Xóa nhiều bản ghi"
@@ -517,21 +520,23 @@ function CollectionDataTable({ collectionName, onRefresh }) {
                     icon={<DeleteOutlined />}
                     loading={batchDeleteLoading}
                     size="large"
+                    className="responsive-button"
                   >
-                    Xóa đã chọn ({selectedRowKeys.length})
+                    <span className="hidden-sm">Xóa đã chọn</span> ({selectedRowKeys.length})
                   </Button>
                 </Popconfirm>
               </>
             )}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+              size="large"
+              className="responsive-button"
+            >
+              <span className="hidden-sm">Thêm mới</span>
+            </Button>
           </Space>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-            size="large"
-          >
-            Thêm mới
-          </Button>
         </div>
 
         <Table
@@ -541,6 +546,7 @@ function CollectionDataTable({ collectionName, onRefresh }) {
           rowSelection={rowSelection}
           loading={loading}
           pagination={{
+            responsive: true,
             pageSize: 20,
             showSizeChanger: true,
             showTotal: (total, range) =>
@@ -551,7 +557,7 @@ function CollectionDataTable({ collectionName, onRefresh }) {
               }`,
             pageSizeOptions: ["10", "20", "50", "100"],
           }}
-          scroll={{ x: "max-content" }}
+          scroll={{ x: "max-content", y: 400 }}
           bordered
           size="small"
           locale={{

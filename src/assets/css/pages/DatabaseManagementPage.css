@@ -95,11 +95,30 @@
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .database-management-page .page-header {
+    flex-wrap: wrap;
+  }
+
+  .database-management-page .header-content {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 768px) {
   .database-management-page .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .database-management-page .page-title {
+    font-size: 20px;
+  }
+
+  .database-management-page .header-icon {
+    font-size: 24px;
   }
 
   .collection-data-table .table-header {
@@ -114,6 +133,28 @@
 
   .collection-data-table .table-header .ant-btn {
     width: 100%;
+  }
+
+  .database-management-page .ant-card {
+    border-radius: 8px;
+  }
+
+  .database-management-page .ant-card-body {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .database-management-page .page-title {
+    font-size: 18px;
+  }
+
+  .database-management-page .page-description {
+    font-size: 12px;
+  }
+
+  .database-management-page .ant-card-body {
+    padding: 12px;
   }
 }
 

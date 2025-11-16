@@ -6,10 +6,8 @@ import {
   addDoc,
   query,
   where,
-  orderBy,
   onSnapshot,
   Timestamp,
-  getDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
@@ -30,7 +28,7 @@ class UserService {
   }
 
   /**
-   * Subscribe to users (Real-time)
+   * Subscribe to users (Real-time) with improved error handling
    */
   subscribeToUsers(callback, errorCallback) {
     console.log(`🔔 Subscribing to ${this.collectionName}...`);
@@ -43,31 +41,63 @@ class UserService {
       const unsubscribe = onSnapshot(
         usersRef,
         (snapshot) => {
-          const users = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            users.push({
-              id: docSnap.id,
-              ...data,
-              createdAt: data.createdAt?.toDate?.() || null,
-              updatedAt: data.updatedAt?.toDate?.() || null,
-              lastLoginTime: data.lastLoginTime?.toDate?.() || null,
+          try {
+            const users = [];
+            snapshot.forEach((docSnap) => {
+              const data = docSnap.data();
+              users.push({
+                id: docSnap.id,
+                ...data,
+                createdAt: data.createdAt?.toDate?.() || null,
+                updatedAt: data.updatedAt?.toDate?.() || null,
+                lastLoginTime: data.lastLoginTime?.toDate?.() || null,
+              });
             });
-          });
 
-          // Sort in memory
-          users.sort((a, b) => {
-            if (!a.createdAt) return 1;
-            if (!b.createdAt) return -1;
-            return b.createdAt - a.createdAt;
-          });
+            // Sort in memory
+            users.sort((a, b) => {
+              if (!a.createdAt) return 1;
+              if (!b.createdAt) return -1;
+              return b.createdAt - a.createdAt;
+            });
 
-          console.log(`✅ Loaded ${users.length} users from Firestore`);
-          callback(users);
+            console.log(`✅ Loaded ${users.length} users from Firestore`);
+            callback(users);
+          } catch (callbackError) {
+            console.error("❌ Error processing snapshot:", callbackError);
+            if (errorCallback) errorCallback(callbackError);
+          }
         },
         (error) => {
-          console.error("❌ Subscription error:", error);
-          if (errorCallback) errorCallback(error);
+          // Ignore AbortError (user cancelled request)
+          if (
+            error.name === "AbortError" ||
+            error.message?.includes("aborted")
+          ) {
+            console.log("ℹ️ Request was aborted, ignoring error");
+            return;
+          }
+
+          // Check for network/timeout errors
+          const isNetworkError =
+            error.code === "unavailable" ||
+            error.code === "deadline-exceeded" ||
+            error.message?.includes("Failed to fetch") ||
+            error.message?.includes("timeout") ||
+            error.message?.includes("Could not reach") ||
+            error.message?.includes("network");
+
+          if (isNetworkError) {
+            console.warn(
+              "⚠️ Network error in subscription, will retry automatically:",
+              error.message
+            );
+            // Firestore will automatically retry, so we don't need to do anything
+            // Just log the warning
+          } else {
+            console.error("❌ Subscription error:", error);
+            if (errorCallback) errorCallback(error);
+          }
         }
       );
 
@@ -80,45 +110,87 @@ class UserService {
   }
 
   /**
-   * Get all users
+   * Get all users with retry logic
    */
-  async getAllUsers() {
+  async getAllUsers(retries = 3) {
     console.log(`📥 Fetching all ${this.collectionName}...`);
 
-    try {
-      this._checkFirestore();
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        this._checkFirestore();
 
-      const usersRef = collection(db, this.collectionName);
-      const snapshot = await getDocs(usersRef);
+        const usersRef = collection(db, this.collectionName);
 
-      if (snapshot.empty) {
-        console.warn(`⚠️  Collection ${this.collectionName} is empty`);
-        return [];
-      }
-
-      const users = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        users.push({
-          id: docSnap.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || null,
-          updatedAt: data.updatedAt?.toDate?.() || null,
-          lastLoginTime: data.lastLoginTime?.toDate?.() || null,
+        // Add timeout wrapper
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Request timeout")), 20000); // 20 seconds
         });
-      });
 
-      users.sort((a, b) => {
-        if (!a.createdAt) return 1;
-        if (!b.createdAt) return -1;
-        return b.createdAt - a.createdAt;
-      });
+        const snapshot = await Promise.race([
+          getDocs(usersRef),
+          timeoutPromise,
+        ]);
 
-      console.log(`✅ Fetched ${users.length} users`);
-      return users;
-    } catch (error) {
-      console.error("❌ Fetch error:", error);
-      throw error;
+        if (snapshot.empty) {
+          console.warn(`⚠️  Collection ${this.collectionName} is empty`);
+          return [];
+        }
+
+        const users = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          users.push({
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || null,
+            updatedAt: data.updatedAt?.toDate?.() || null,
+            lastLoginTime: data.lastLoginTime?.toDate?.() || null,
+          });
+        });
+
+        users.sort((a, b) => {
+          if (!a.createdAt) return 1;
+          if (!b.createdAt) return -1;
+          return b.createdAt - a.createdAt;
+        });
+
+        console.log(`✅ Fetched ${users.length} users`);
+        return users;
+      } catch (error) {
+        // Ignore AbortError
+        if (error.name === "AbortError" || error.message?.includes("aborted")) {
+          console.log("ℹ️ Request was aborted");
+          return [];
+        }
+
+        const isTimeout =
+          error.message?.includes("timeout") ||
+          error.message?.includes("Could not reach") ||
+          error.code === "unavailable" ||
+          error.code === "deadline-exceeded" ||
+          error.message?.includes("Failed to fetch");
+
+        if (isTimeout && attempt < retries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          console.warn(
+            `⚠️ Get all users timeout (attempt ${attempt}/${retries}), retrying in ${delay}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        console.error("❌ Fetch error:", error);
+
+        // If it's a network error and we've exhausted retries, return empty array
+        if (isTimeout && attempt === retries) {
+          console.warn(
+            "⚠️ Network timeout after retries, returning empty array"
+          );
+          return [];
+        }
+
+        throw error;
+      }
     }
   }
 
@@ -168,32 +240,69 @@ class UserService {
   }
 
   /**
-   * Get user by email
+   * Get user by email with retry logic
    */
-  async getUserByEmail(email) {
-    try {
-      this._checkFirestore();
+  async getUserByEmail(email, retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        this._checkFirestore();
 
-      const usersRef = collection(db, this.collectionName);
-      const q = query(usersRef, where("email", "==", email));
-      const snapshot = await getDocs(q);
+        const usersRef = collection(db, this.collectionName);
+        const q = query(usersRef, where("email", "==", email));
 
-      if (snapshot.empty) {
-        return null;
+        // Add timeout wrapper
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Request timeout")), 15000); // 15 seconds
+        });
+
+        const snapshot = await Promise.race([getDocs(q), timeoutPromise]);
+
+        if (snapshot.empty) {
+          return null;
+        }
+
+        const docSnap = snapshot.docs[0];
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || null,
+          updatedAt: data.updatedAt?.toDate?.() || null,
+          lastLoginTime: data.lastLoginTime?.toDate?.() || null,
+        };
+      } catch (error) {
+        // Ignore AbortError
+        if (error.name === "AbortError" || error.message?.includes("aborted")) {
+          console.log("ℹ️ Request was aborted");
+          return null;
+        }
+
+        const isTimeout =
+          error.message?.includes("timeout") ||
+          error.message?.includes("Could not reach") ||
+          error.message?.includes("Failed to fetch") ||
+          error.code === "unavailable" ||
+          error.code === "deadline-exceeded";
+
+        if (isTimeout && attempt < retries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+          console.warn(
+            `⚠️ Get user by email timeout (attempt ${attempt}/${retries}), retrying in ${delay}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        console.error("❌ Get user by email error:", error);
+
+        // If it's a network error and we've exhausted retries, return null instead of throwing
+        if (isTimeout && attempt === retries) {
+          console.warn("⚠️ Network timeout after retries, returning null");
+          return null;
+        }
+
+        throw error;
       }
-
-      const docSnap = snapshot.docs[0];
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || null,
-        updatedAt: data.updatedAt?.toDate?.() || null,
-        lastLoginTime: data.lastLoginTime?.toDate?.() || null,
-      };
-    } catch (error) {
-      console.error("❌ Get user by email error:", error);
-      throw error;
     }
   }
 
@@ -324,50 +433,88 @@ class UserService {
   }
 
   /**
-   * Create a new user account
+   * Create a new user account with retry logic
    * @param {Object} userData - User data (email, name, phoneNumber, etc.)
    * @param {boolean} isAdmin - Whether to create as admin
    * @param {string} createdBy - ID of user creating this account
    * @returns {Promise<string>} - New user ID
    */
-  async createUser(userData, isAdmin = false, createdBy = null) {
+  async createUser(userData, isAdmin = false, createdBy = null, retries = 3) {
     console.log(`🆕 Creating new user: ${userData.email}, Admin: ${isAdmin}`);
 
-    try {
-      this._checkFirestore();
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        this._checkFirestore();
 
-      // Check if user already exists
-      const existingUser = await this.getUserByEmail(userData.email);
-      if (existingUser) {
-        throw new Error("Email đã được sử dụng");
+        // Check if user already exists (with timeout handling)
+        const existingUser = await this.getUserByEmail(userData.email, 1);
+        if (existingUser) {
+          throw new Error("Email đã được sử dụng");
+        }
+
+        const usersRef = collection(db, this.collectionName);
+
+        // Determine account status
+        // If created by admin (createdBy is not null), status is ACTIVE
+        // If self-registered (createdBy is null), status is PENDING (waiting for approval)
+        const accountStatus = createdBy ? "ACTIVE" : "PENDING";
+
+        const newUser = {
+          email: userData.email,
+          name: userData.name || userData.email.split("@")[0],
+          phoneNumber: userData.phoneNumber || null,
+          role: isAdmin ? "ADMIN" : "USER",
+          accountStatus: accountStatus,
+          isSuperAdmin: false, // New users are never super admin
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+          createdBy: createdBy || null,
+          lastLoginTime: null,
+        };
+
+        // Add timeout wrapper
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Request timeout")), 15000); // 15 seconds
+        });
+
+        const docRef = await Promise.race([
+          addDoc(usersRef, newUser),
+          timeoutPromise,
+        ]);
+
+        console.log(`✅ Created user: ${docRef.id} (${userData.email})`);
+        return docRef.id;
+      } catch (error) {
+        // Ignore AbortError
+        if (error.name === "AbortError" || error.message?.includes("aborted")) {
+          console.log("ℹ️ Request was aborted");
+          throw new Error("Request was cancelled");
+        }
+
+        const isTimeout =
+          error.message?.includes("timeout") ||
+          error.message?.includes("Could not reach") ||
+          error.message?.includes("Failed to fetch") ||
+          error.code === "unavailable" ||
+          error.code === "deadline-exceeded";
+
+        // Don't retry if it's a duplicate email error
+        if (error.message?.includes("đã được sử dụng")) {
+          throw error;
+        }
+
+        if (isTimeout && attempt < retries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff
+          console.warn(
+            `⚠️ Create user timeout (attempt ${attempt}/${retries}), retrying in ${delay}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        console.error("❌ Create user error:", error);
+        throw error;
       }
-
-      const usersRef = collection(db, this.collectionName);
-      
-      // Determine account status
-      // If created by admin (createdBy is not null), status is ACTIVE
-      // If self-registered (createdBy is null), status is PENDING (waiting for approval)
-      const accountStatus = createdBy ? "ACTIVE" : "PENDING";
-
-      const newUser = {
-        email: userData.email,
-        name: userData.name || userData.email.split("@")[0],
-        phoneNumber: userData.phoneNumber || null,
-        role: isAdmin ? "ADMIN" : "USER",
-        accountStatus: accountStatus,
-        isSuperAdmin: false, // New users are never super admin
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        createdBy: createdBy || null,
-        lastLoginTime: null,
-      };
-
-      const docRef = await addDoc(usersRef, newUser);
-      console.log(`✅ Created user: ${docRef.id} (${userData.email})`);
-      return docRef.id;
-    } catch (error) {
-      console.error("❌ Create user error:", error);
-      throw error;
     }
   }
 
@@ -377,6 +524,58 @@ class UserService {
   isSuperAdminEmail(email) {
     const SUPER_ADMIN_EMAIL = "thachdien142004@gmail.com";
     return email && email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  }
+
+  /**
+   * Change user password (Admin function)
+   * Uses Cloud Functions to change password using Firebase Admin SDK
+   * @param {string} userId - User ID to change password
+   * @param {string} newPassword - New password
+   * @returns {Promise<void>}
+   */
+  async changeUserPassword(userId, newPassword) {
+    console.log(`🔐 Changing password for user ${userId}`);
+
+    try {
+      // Validate password
+      if (!newPassword || newPassword.length < 6) {
+        throw new Error("Mật khẩu phải có ít nhất 6 ký tự");
+      }
+
+      // Import Firebase Functions
+      const { getFunctions, httpsCallable } = await import("firebase/functions");
+      const { app } = await import("../firebase");
+
+      // Get Functions instance
+      const functions = getFunctions(app);
+      const changePasswordFunction = httpsCallable(functions, "changeUserPassword");
+
+      // Call the Cloud Function
+      const result = await changePasswordFunction({
+        userId: userId,
+        newPassword: newPassword,
+      });
+
+      console.log(`✅ Password changed successfully for user ${userId}`);
+      return result.data;
+    } catch (error) {
+      console.error("❌ Change password error:", error);
+
+      // Handle specific error codes
+      if (error.code === "functions/permission-denied") {
+        throw new Error("Bạn không có quyền thay đổi mật khẩu");
+      } else if (error.code === "functions/not-found") {
+        throw new Error("Không tìm thấy người dùng");
+      } else if (error.code === "functions/invalid-argument") {
+        throw new Error(error.message || "Dữ liệu không hợp lệ");
+      } else if (error.code === "functions/unauthenticated") {
+        throw new Error("Bạn cần đăng nhập để thực hiện thao tác này");
+      } else if (error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error("Không thể thay đổi mật khẩu. Vui lòng thử lại sau.");
+      }
+    }
   }
 }
 

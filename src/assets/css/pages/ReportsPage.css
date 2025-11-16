@@ -118,3 +118,67 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Responsive */
+@media (max-width: 1200px) {
+  .reports-page {
+    padding: 0;
+  }
+
+  .reports-page .chart-container {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .reports-page .stat-card {
+    margin-bottom: 12px;
+  }
+
+  .reports-page .ant-statistic-content {
+    font-size: 20px;
+  }
+
+  .reports-page .ant-statistic-title {
+    font-size: 12px;
+  }
+
+  .reports-page .ant-card-body {
+    padding: 16px;
+  }
+
+  .reports-page .filter-section {
+    padding: 12px;
+  }
+
+  .reports-page .chart-container {
+    padding: 8px;
+  }
+
+  .reports-page .ant-radio-group {
+    flex-direction: column;
+  }
+
+  .reports-page .ant-radio-button-wrapper {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .reports-page .ant-statistic-content {
+    font-size: 18px;
+  }
+
+  .reports-page .ant-card-body {
+    padding: 12px;
+  }
+
+  .reports-page .filter-section {
+    padding: 8px;
+  }
+
+  .reports-page .category-icon {
+    font-size: 20px;
+  }
+}
+

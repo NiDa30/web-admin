@@ -101,12 +101,44 @@
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .users-page {
     padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .users-page {
+    padding: 12px;
   }
 
   .users-table {
     font-size: 12px;
+  }
+
+  .users-table-card .ant-card-head {
+    padding: 12px 16px;
+  }
+
+  .users-table-card .ant-card-head-title {
+    font-size: 14px;
+  }
+
+  .stat-card {
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .users-page {
+    padding: 8px;
+  }
+
+  .users-table-card {
+    border-radius: 8px;
+  }
+
+  .users-table-card .ant-card-body {
+    padding: 12px;
   }
 }
